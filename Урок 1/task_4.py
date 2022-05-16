@@ -8,3 +8,11 @@
 Подсказки:
 --- используйте списки и циклы, не дублируйте функции
 """
+
+WORDS = ['разработка', 'администрирование', 'protocol', 'standard']
+
+for word in WORDS:
+    word_b = word.encode('utf-8')
+    print(word_b, type(word_b))
+    word_s = word_b.decode('utf-8')
+    print(word_s, type(word_s))
