@@ -10,7 +10,3 @@
 --- b'class' - используйте маркировку b''
 --- используйте списки и циклы, не дублируйте функции
 """
-
-WORDS = [b'class', b'function', b'method']
-for word in WORDS:
-    print(f'Тип - {type(word)}, содержимое - {word}, длинна - {len(word)} символов')
