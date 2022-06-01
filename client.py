@@ -1,10 +1,14 @@
 from socket import socket, AF_INET, SOCK_STREAM, gaierror
 import datetime
 import sys
+import logging
+import log.client_log_config
 
 from common.variables import DEFAULT_USER, DEFAULT_PORT, ACTION, TIME, USER, PRESENCE, ERROR, RESPONSE, ALLERT, \
     ACCOUNT_NAME, STATUS, TYPE
 from common.utils import get_message, send_message
+
+LOG = logging.getLogger('client')
 
 
 def create_presence(akk_name=DEFAULT_USER):
@@ -22,6 +26,7 @@ def create_presence(akk_name=DEFAULT_USER):
             STATUS: "Yep, I am here!"
         }
     }
+    LOG.info('Cоздано PRESENCE сообщение')
     return msg
 
 
@@ -32,8 +37,10 @@ def parse_response(response):
     :return:
     """
     if response[RESPONSE] == 200:
+        LOG.debug(f'Получен ответ от сервера -  {response[RESPONSE]}: {response[ALLERT]}')
         return f'{response[RESPONSE]}: {response[ALLERT]}'
     elif response[RESPONSE] == 400:
+        LOG.debug(f'Получен ответ от сервера - {response[RESPONSE]}: {response[ERROR]}')
         return f'{response[RESPONSE]}: {response[ERROR]}'
 
 
@@ -47,20 +54,22 @@ def main():
             port = DEFAULT_PORT
 
         client_socket.connect((addr, port))
-        print(f'Подключился к серверу:{addr}')
+        LOG.info(f'Клиент подключился к серверу {addr} порт {port}')
         send_message(client_socket, create_presence())
         response = get_message(client_socket)
         response = parse_response(response)
         print(response)
         client_socket.close()
     except IndexError:
-        print('Необходимо ввести ip адрес сервера')
+        LOG.error('Не введен ip адрес сервера')
     except OverflowError:
-        print('Порт должен быть от 0-65535')
+        LOG.error('Введен неправильный порт, порт должен быть от 0-65535')
     except ValueError:
-        print('Порт это число от 0-65535')
+        LOG.error('Введен неправильный порт, порт должен быть числом от 0-65535')
     except gaierror:
-        print('Неправильно введен Ip адрес')
+        LOG.error('Неправильно введен Ip адрес')
+    except ConnectionRefusedError as err:
+        LOG.error(err)
 
 
 if __name__ == "__main__":
