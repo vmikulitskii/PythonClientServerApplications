@@ -1,8 +1,10 @@
-import json
+import json, sys
 
+from common.decorators import log
 from common.variables import MAX_PACKAGE_LENGTH, ENCODING
 
 
+@log
 def get_message(client):
     """
     Функция для получения сообщения и декодирования из байтов в словарь. Если приянто что то другое то выдает ошибку
@@ -20,6 +22,7 @@ def get_message(client):
         return ValueError
 
 
+@log
 def send_message(sock, message):
     """
     Функция принимает сокет и словарь, кодирует его и отправляет
