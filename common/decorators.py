@@ -8,10 +8,11 @@ def log(func):
         LOG = logging.getLogger('functions')
         parent = traceback.extract_stack()[-2].name
         file = traceback.extract_stack()[-2].filename
-        if parent != '<module>':
-            LOG.debug(f'Функция {func.__name__} вызвана из функции {parent} {file} ')
+        text = 'функции ' if parent != '<module>' else ''
+        if args or kwargs:
+            LOG.debug(f'Функция {func.__name__} с аргументами {args,kwargs} вызвана из {text}{parent} {file} ')
         else:
-            LOG.debug(f'Функция {func.__name__} вызвана из {parent} {file} ')
+            LOG.debug(f'Функция {func.__name__} вызвана из {text}{parent} {file} ')
         res = func(*args, **kwargs)
         return res
 
