@@ -3,6 +3,7 @@ import datetime
 import sys
 import logging
 import log.client_log_config
+from common.decorators import log
 
 from common.variables import DEFAULT_USER, DEFAULT_PORT, ACTION, TIME, USER, PRESENCE, ERROR, RESPONSE, ALLERT, \
     ACCOUNT_NAME, STATUS, TYPE
@@ -11,6 +12,7 @@ from common.utils import get_message, send_message
 LOG = logging.getLogger('client')
 
 
+@log
 def create_presence(akk_name=DEFAULT_USER):
     """
     Получает имя пользователя и генерирует presence сообщение
@@ -30,6 +32,7 @@ def create_presence(akk_name=DEFAULT_USER):
     return msg
 
 
+@log
 def parse_response(response):
     """
     Проверяет ответ от сервера
@@ -44,6 +47,7 @@ def parse_response(response):
         return f'{response[RESPONSE]}: {response[ERROR]}'
 
 
+@log
 def main():
     try:
         client_socket = socket(AF_INET, SOCK_STREAM)
@@ -74,3 +78,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    create_presence()

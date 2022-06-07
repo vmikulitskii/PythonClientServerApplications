@@ -3,6 +3,7 @@ import datetime
 import sys
 import logging
 import log.server_log_config
+from common.decorators import log
 
 from common.utils import get_message, send_message
 from common.variables import ACTION, TIME, USER, PRESENCE, ERROR, RESPONSE, ALLERT, MAX_CONNECTIONS, DEFAULT_PORT, \
@@ -11,6 +12,7 @@ from common.variables import ACTION, TIME, USER, PRESENCE, ERROR, RESPONSE, ALLE
 LOG = logging.getLogger('server')
 
 
+@log
 def create_answer(message):
     """
     Функция принимает сообщение в виде словаря, проверяет его и генерирует ответ
@@ -33,6 +35,7 @@ def create_answer(message):
     return answer
 
 
+@log
 def main():
     serv_socket = socket(AF_INET, SOCK_STREAM)
     try:
