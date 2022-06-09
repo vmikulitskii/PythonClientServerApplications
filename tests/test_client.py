@@ -1,5 +1,5 @@
 import unittest
-from client import create_presence, parse_response
+from client_recv import create_presence, parse_response
 from common.variables import *
 
 
