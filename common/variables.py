@@ -19,6 +19,10 @@ ACCOUNT_NAME = 'account_name'
 ALLERT = 'allert'
 STATUS = 'status'
 TYPE = 'type'
+MSG = 'msg'
+FROM = 'from'
+MESSAGE = 'message'
+TO = 'to'
 
 # Прочие ключи, используемые в протоколе
 PRESENCE = 'presence'
@@ -31,4 +35,4 @@ DEFAULT_USER = 'Guest'
 __all__ = ('DEFAULT_PORT', 'DEFAULT_IP_ADDRESS', 'MAX_CONNECTIONS',
            'MAX_PACKAGE_LENGTH', 'ENCODING', 'ACTION', 'TIME', 'USER', 'ACCOUNT_NAME',
            'ALLERT', 'STATUS', 'TYPE', 'PRESENCE', 'RESPONSE', 'ERROR',
-           'DEFAULT_USER')
+           'DEFAULT_USER','MSG','TO','FROM','MESSAGE')

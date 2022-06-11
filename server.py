@@ -1,3 +1,5 @@
+import select
+import time
 from socket import socket, AF_INET, SOCK_STREAM
 import datetime
 import sys
@@ -6,8 +8,7 @@ import log.server_log_config
 from common.decorators import log
 
 from common.utils import get_message, send_message
-from common.variables import ACTION, TIME, USER, PRESENCE, ERROR, RESPONSE, ALLERT, MAX_CONNECTIONS, DEFAULT_PORT, \
-    ACCOUNT_NAME
+from common.variables import *
 
 LOG = logging.getLogger('server')
 
@@ -26,6 +27,9 @@ def create_answer(message):
             TIME: datetime.datetime.now().timestamp(),
             ALLERT: f'Приветствую вас - {message[USER][ACCOUNT_NAME]}'
         }
+    elif ACTION in message and message[
+        ACTION] == MSG and TIME in message and FROM in message and TO in message and message[TO] == '#':
+        answer = message
     else:
         answer = {
             RESPONSE: 400,
@@ -33,6 +37,54 @@ def create_answer(message):
         }
     LOG.debug(f'Сформирован ответ: {answer}')
     return answer
+
+
+def read_requests(read_clients, all_clients: list):
+    """
+    Принимаем список клиентов на чтение и общий список клиентов
+    Возвращаем словарь клиент - запрос
+    :param read_clients:
+    :param all_clients:
+    :return:
+    """
+    responses = {}
+
+    for sock in read_clients:
+        try:
+            data = get_message(sock)
+            responses[sock] = data
+        except:
+            LOG.debug(f'Клиент{sock.fileno()} {sock.getpeername()} отключился')
+            all_clients.remove(sock)
+    return responses
+
+
+def write_responses(requests, write_clients, all_clients):
+    """
+    Получаем словарь с запросами, список клиентов на запись и всех клиентов
+    если в сообщение есть TO = # то это сообщение будет отправлено всем клиентам
+    если это презенс сообщение, то оно будет обработано и ответ прийдет только тому клиенту,э
+    который его отправил
+
+    :param requests:
+    :param write_clients:
+    :param all_clients:
+    :return:
+    """
+    for sock in write_clients:
+        try:
+            for key in requests:
+                resp = requests[key]
+                if requests[key].get(TO) == "#":
+                    send_message(sock, create_answer(resp))
+                elif requests[key].get(ACTION) == PRESENCE:
+                    if key == sock:
+                        send_message(sock, create_answer(resp))
+        except Exception as E:
+            LOG.debug(f'Клиент{sock.fileno()} {sock.getpeername()} отключился')
+            print(E)
+            sock.close
+            all_clients.remove(sock)
 
 
 @log
@@ -53,19 +105,36 @@ def main():
 
         serv_socket.bind((addr, port))
         serv_socket.listen(MAX_CONNECTIONS)
+        serv_socket.settimeout(0.5)
+        clients = []
 
-        try:
-            LOG.info(f'Сервер запущен на порту {port}')
-            while True:
+        LOG.info(f'Сервер запущен на порту {port}')
+        while True:
+            try:
                 client_sock, client_addr = serv_socket.accept()
                 LOG.info(f'Подключился ПК {client_addr}')
-                data = get_message(client_sock)
-                answer = create_answer(data)
-                send_message(client_sock, answer)
-                client_sock.close()
-                LOG.info(f'закрыто соединение с ПК {client_addr}')
-        finally:
-            serv_socket.close()
+            except OSError:
+                pass
+            else:
+                clients.append(client_sock)
+            # data = get_message(client_sock)
+            # answer = create_answer(data)
+            # send_message(client_sock, answer)
+            # client_sock.close()
+            # LOG.info(f'закрыто соединение с ПК {client_addr}')
+            finally:
+                wait = 10
+                read = []
+                write = []
+                try:
+                    read, write, error = select.select(clients, clients, [], wait)
+                except:
+                    pass
+
+                responses = read_requests(read, clients)
+                write_responses(responses, write, clients)
+                pass
+
     except OverflowError:
         LOG.error('Введен неправильный порт, порт должен быть от 0-65535')
     except ValueError:
