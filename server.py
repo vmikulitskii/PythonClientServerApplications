@@ -28,7 +28,7 @@ def create_answer(message):
             ALLERT: f'Приветствую вас - {message[USER][ACCOUNT_NAME]}'
         }
     elif ACTION in message and message[
-        ACTION] == MSG and TIME in message and FROM in message and TO in message and message[TO] == '#':
+        ACTION] == MSG and TIME in message and FROM in message and TO in message:
         answer = message
     else:
         answer = {
@@ -75,11 +75,17 @@ def write_responses(requests, write_clients, all_clients):
         try:
             for key in requests:
                 resp = requests[key]
-                if requests[key].get(TO) == "#":
+                if requests[key].get(TO):
                     send_message(sock, create_answer(resp))
                 elif requests[key].get(ACTION) == PRESENCE:
                     if key == sock:
                         send_message(sock, create_answer(resp))
+                elif requests[key].get(ACTION) == EXIT:
+                    if key == sock:
+                        sock.close
+                        all_clients.remove(sock)
+                        LOG.debug(f'Клиент{sock.fileno()} {sock.getpeername()} отключился')
+                        return
         except Exception as E:
             LOG.debug(f'Клиент{sock.fileno()} {sock.getpeername()} отключился')
             print(E)
