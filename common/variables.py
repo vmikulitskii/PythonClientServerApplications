@@ -23,6 +23,7 @@ MSG = 'msg'
 FROM = 'from'
 MESSAGE = 'message'
 TO = 'to'
+EXIT = 'exit'
 
 # Прочие ключи, используемые в протоколе
 PRESENCE = 'presence'
@@ -35,4 +36,4 @@ DEFAULT_USER = 'Guest'
 __all__ = ('DEFAULT_PORT', 'DEFAULT_IP_ADDRESS', 'MAX_CONNECTIONS',
            'MAX_PACKAGE_LENGTH', 'ENCODING', 'ACTION', 'TIME', 'USER', 'ACCOUNT_NAME',
            'ALLERT', 'STATUS', 'TYPE', 'PRESENCE', 'RESPONSE', 'ERROR',
-           'DEFAULT_USER','MSG','TO','FROM','MESSAGE')
+           'DEFAULT_USER','MSG','TO','FROM','MESSAGE','EXIT')
