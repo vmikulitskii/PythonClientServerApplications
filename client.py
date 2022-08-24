@@ -10,11 +10,14 @@ import threading
 
 from common.variables import *
 from common.utils import get_message, send_message
+from descriptors import CorrectPort
 
 LOG = logging.getLogger('client')
 
 
 class Client:
+    port = CorrectPort()
+
     def __init__(self):
         try:
             self.addr = sys.argv[1]
@@ -54,7 +57,7 @@ class Client:
         return msg
 
     @log
-    def parse_response(self,response):
+    def parse_response(self, response):
         """
         Проверяет ответ от сервера
         :param response: dict
@@ -67,7 +70,7 @@ class Client:
             LOG.debug(f'Получен ответ от сервера - {response[RESPONSE]}: {response[ERROR]}')
             return f'{response[RESPONSE]}: {response[ERROR]}'
 
-    def message_from_server(self,client_sock):
+    def message_from_server(self, client_sock):
         while True:
             try:
                 message = get_message(client_sock)
@@ -80,7 +83,7 @@ class Client:
                 print(f'Потеряно соединение с сервером.')
                 break
 
-    def create_message(self,text,to):
+    def create_message(self, text, to):
         """
         Получает текст имя отправителя и получателя и генерирует message
         :param text: str
@@ -114,7 +117,7 @@ class Client:
         print('help - вывести подсказки по командам')
         print('exit - выход из программы')
 
-    def user_interactive(self,client_socket):
+    def user_interactive(self, client_socket):
         self.print_help()
         while True:
             command = input('Введите команду: ')
@@ -166,8 +169,6 @@ class Client:
 def main():
     client = Client()
     client.start()
-
-
 
 
 if __name__ == "__main__":

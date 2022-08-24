@@ -10,12 +10,16 @@ from common.decorators import log
 
 from common.utils import get_message, send_message
 from common.variables import *
+from descriptors import CorrectPort
 
 LOG = logging.getLogger('server')
 
 
 class Server:
+    port = CorrectPort()
+
     def __init__(self):
+        self.serv_socket = socket(AF_INET, SOCK_STREAM)
         if '-p' in sys.argv:
             index = sys.argv.index('-p')
             self.port = int(sys.argv[index + 1])
@@ -107,7 +111,6 @@ class Server:
                 all_clients.remove(sock)
 
     def start(self):
-        self.serv_socket = socket(AF_INET, SOCK_STREAM)
         self.serv_socket.bind((self.addr, self.port))
         self.serv_socket.settimeout(0.5)
         self.serv_socket.listen(MAX_CONNECTIONS)
