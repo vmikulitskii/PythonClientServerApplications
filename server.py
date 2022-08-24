@@ -1,5 +1,6 @@
 import select
 import time
+from pprint import pprint
 from socket import socket, AF_INET, SOCK_STREAM
 import datetime
 import sys
@@ -13,138 +14,132 @@ from common.variables import *
 LOG = logging.getLogger('server')
 
 
-@log
-def create_answer(message):
-    """
-    Функция принимает сообщение в виде словаря, проверяет его и генерирует ответ
-    :param message: dict
-    :return: dict
-    """
-    LOG.debug(f'Получено сообщение: {message}')
-    if ACTION in message and message[ACTION] == PRESENCE and TIME in message and USER in message:
-        answer = {
-            RESPONSE: 200,
-            TIME: datetime.datetime.now().timestamp(),
-            ALLERT: f'Приветствую вас - {message[USER][ACCOUNT_NAME]}'
-        }
-    elif ACTION in message and message[
-        ACTION] == MSG and TIME in message and FROM in message and TO in message:
-        answer = message
-    else:
-        answer = {
-            RESPONSE: 400,
-            ERROR: 'Bad Request'
-        }
-    LOG.debug(f'Сформирован ответ: {answer}')
-    return answer
-
-
-def read_requests(read_clients, all_clients: list):
-    """
-    Принимаем список клиентов на чтение и общий список клиентов
-    Возвращаем словарь клиент - запрос
-    :param read_clients:
-    :param all_clients:
-    :return:
-    """
-    responses = {}
-
-    for sock in read_clients:
-        try:
-            data = get_message(sock)
-            responses[sock] = data
-        except:
-            LOG.debug(f'Клиент{sock.fileno()} {sock.getpeername()} отключился')
-            all_clients.remove(sock)
-    return responses
-
-
-def write_responses(requests, write_clients, all_clients):
-    """
-    Получаем словарь с запросами, список клиентов на запись и всех клиентов
-    если в сообщение есть TO = # то это сообщение будет отправлено всем клиентам
-    если это презенс сообщение, то оно будет обработано и ответ прийдет только тому клиенту,э
-    который его отправил
-
-    :param requests:
-    :param write_clients:
-    :param all_clients:
-    :return:
-    """
-    for sock in write_clients:
-        try:
-            for key in requests:
-                resp = requests[key]
-                if requests[key].get(TO):
-                    send_message(sock, create_answer(resp))
-                elif requests[key].get(ACTION) == PRESENCE:
-                    if key == sock:
-                        send_message(sock, create_answer(resp))
-                elif requests[key].get(ACTION) == EXIT:
-                    if key == sock:
-                        sock.close
-                        all_clients.remove(sock)
-                        LOG.debug(f'Клиент{sock.fileno()} {sock.getpeername()} отключился')
-                        return
-        except Exception as E:
-            LOG.debug(f'Клиент{sock.fileno()} {sock.getpeername()} отключился')
-            print(E)
-            sock.close
-            all_clients.remove(sock)
-
-
-@log
-def main():
-    serv_socket = socket(AF_INET, SOCK_STREAM)
-    try:
-
+class Server:
+    def __init__(self):
         if '-p' in sys.argv:
             index = sys.argv.index('-p')
-            port = int(sys.argv[index + 1])
+            self.port = int(sys.argv[index + 1])
         else:
-            port = DEFAULT_PORT
+            self.port = DEFAULT_PORT
         if '-a' in sys.argv:
             index = sys.argv.index('-a')
-            addr = sys.argv[index + 1]
+            self.addr = sys.argv[index + 1]
         else:
-            addr = ''
+            self.addr = ''
+        self.clients = []
 
-        serv_socket.bind((addr, port))
-        serv_socket.listen(MAX_CONNECTIONS)
-        serv_socket.settimeout(0.5)
-        clients = []
+    @log
+    def create_answer(self, message):
 
-        LOG.info(f'Сервер запущен на порту {port}')
+        """
+        Функция принимает сообщение в виде словаря, проверяет его и генерирует ответ
+        :param message: dict
+        :return: dict
+        """
+        LOG.debug(f'Получено сообщение: {message}')
+        if ACTION in message and message[ACTION] == PRESENCE and TIME in message and USER in message:
+            answer = {
+                RESPONSE: 200,
+                TIME: datetime.datetime.now().timestamp(),
+                ALLERT: f'Приветствую вас - {message[USER][ACCOUNT_NAME]}'
+            }
+        elif ACTION in message and message[
+            ACTION] == MSG and TIME in message and FROM in message and TO in message:
+            answer = message
+        else:
+            answer = {
+                RESPONSE: 400,
+                ERROR: 'Bad Request'
+            }
+        LOG.debug(f'Сформирован ответ: {answer}')
+        return answer
+
+    def read_requests(self, read_clients, all_clients: list):
+        """
+        Принимаем список клиентов на чтение и общий список клиентов
+        Возвращаем словарь клиент - запрос
+        :param read_clients:
+        :param all_clients:
+        :return:
+        """
+        responses = {}
+
+        for sock in read_clients:
+            try:
+                data = get_message(sock)
+                responses[sock] = data
+            except:
+                LOG.debug(f'Клиент{sock.fileno()} {sock.getpeername()} отключился')
+                all_clients.remove(sock)
+        return responses
+
+    def write_responses(self, requests, write_clients, all_clients):
+        """
+        Получаем словарь с запросами, список клиентов на запись и всех клиентов
+        если в сообщение есть TO = # то это сообщение будет отправлено всем клиентам
+        если это презенс сообщение, то оно будет обработано и ответ прийдет только тому клиенту,э
+        который его отправил
+
+        :param requests:
+        :param write_clients:
+        :param all_clients:
+        :return:
+        """
+        for sock in write_clients:
+            try:
+                for key in requests:
+                    resp = requests[key]
+                    if requests[key].get(TO):
+                        send_message(sock, self.create_answer(resp))
+                    elif requests[key].get(ACTION) == PRESENCE:
+                        if key == sock:
+                            send_message(sock, self.create_answer(resp))
+                    elif requests[key].get(ACTION) == EXIT:
+                        if key == sock:
+                            sock.close
+                            all_clients.remove(sock)
+                            LOG.debug(f'Клиент{sock.fileno()} {sock.getpeername()} отключился')
+                            return
+            except Exception as E:
+                LOG.debug(f'Клиент{sock.fileno()} {sock.getpeername()} отключился')
+                print(E)
+                sock.close
+                all_clients.remove(sock)
+
+    def start(self):
+        self.serv_socket = socket(AF_INET, SOCK_STREAM)
+        self.serv_socket.bind((self.addr, self.port))
+        self.serv_socket.settimeout(0.5)
+        self.serv_socket.listen(MAX_CONNECTIONS)
+
+        LOG.info(f'Сервер запущен на порту {self.port}')
+
         while True:
             try:
-                client_sock, client_addr = serv_socket.accept()
+                client_sock, client_addr = self.serv_socket.accept()
                 LOG.info(f'Подключился ПК {client_addr}')
+                print(f'Подключился ПК {client_addr}')
             except OSError:
                 pass
             else:
-                clients.append(client_sock)
-            # data = get_message(client_sock)
-            # answer = create_answer(data)
-            # send_message(client_sock, answer)
-            # client_sock.close()
-            # LOG.info(f'закрыто соединение с ПК {client_addr}')
+                self.clients.append(client_sock)
             finally:
                 wait = 10
                 read = []
                 write = []
                 try:
-                    read, write, error = select.select(clients, clients, [], wait)
+                    read, write, error = select.select(self.clients, self.clients, [], wait)
                 except:
                     pass
 
-                responses = read_requests(read, clients)
-                write_responses(responses, write, clients)
-                pass
+                responses = self.read_requests(read, self.clients)
+                self.write_responses(responses, write, self.clients)
 
-    except OverflowError:
-        LOG.error('Введен неправильный порт, порт должен быть от 0-65535')
-    except ValueError:
-        LOG.error('Введен неправильный порт, порт должен быть числом от 0-65535')
+
+@log
+def main():
+    server = Server()
+    server.start()
 
 
 if __name__ == "__main__":
