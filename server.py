@@ -11,15 +11,15 @@ from common.decorators import log
 from common.utils import get_message, send_message
 from common.variables import *
 from descriptors import CorrectPort
+from metaclasses import ClientVerifier, ServerVerifier
 
 LOG = logging.getLogger('server')
 
 
-class Server:
+class Server(metaclass=ServerVerifier):
     port = CorrectPort()
 
     def __init__(self):
-        self.serv_socket = socket(AF_INET, SOCK_STREAM)
         if '-p' in sys.argv:
             index = sys.argv.index('-p')
             self.port = int(sys.argv[index + 1])
@@ -111,15 +111,16 @@ class Server:
                 all_clients.remove(sock)
 
     def start(self):
-        self.serv_socket.bind((self.addr, self.port))
-        self.serv_socket.settimeout(0.5)
-        self.serv_socket.listen(MAX_CONNECTIONS)
+        serv_socket = socket(AF_INET, SOCK_STREAM)
+        serv_socket.bind((self.addr, self.port))
+        serv_socket.settimeout(0.5)
+        serv_socket.listen(MAX_CONNECTIONS)
 
         LOG.info(f'Сервер запущен на порту {self.port}')
 
         while True:
             try:
-                client_sock, client_addr = self.serv_socket.accept()
+                client_sock, client_addr = serv_socket.accept()
                 LOG.info(f'Подключился ПК {client_addr}')
                 print(f'Подключился ПК {client_addr}')
             except OSError:

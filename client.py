@@ -11,11 +11,12 @@ import threading
 from common.variables import *
 from common.utils import get_message, send_message
 from descriptors import CorrectPort
+from metaclasses import ClientVerifier, ServerVerifier
 
 LOG = logging.getLogger('client')
 
 
-class Client:
+class Client(metaclass=ClientVerifier):
     port = CorrectPort()
 
     def __init__(self):
