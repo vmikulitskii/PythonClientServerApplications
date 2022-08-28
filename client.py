@@ -66,10 +66,10 @@ class Client(metaclass=ClientVerifier):
         """
         if response.get(RESPONSE) == 200:
             LOG.debug(f'Получен ответ от сервера -  {response[RESPONSE]}: {response[ALLERT]}')
-            return f'{response[RESPONSE]}: {response[ALLERT]}'
+            return response[RESPONSE],response[ALLERT]
         elif response.get(RESPONSE) == 400:
             LOG.debug(f'Получен ответ от сервера - {response[RESPONSE]}: {response[ERROR]}')
-            return f'{response[RESPONSE]}: {response[ERROR]}'
+            return response[RESPONSE],response[ERROR]
 
     def message_from_server(self, client_sock):
         while True:
@@ -108,7 +108,8 @@ class Client(metaclass=ClientVerifier):
             TIME: datetime.datetime.now().timestamp(),
             FROM: self.akk_name
         }
-        LOG.info('Cоздано MESSAGE сообщение')
+        LOG.info('Cоздано  EXIT MESSAGE сообщение')
+        return msg
 
     @staticmethod
     def print_help():
@@ -145,21 +146,22 @@ class Client(metaclass=ClientVerifier):
                 LOG.info(f'Клиент подключился к серверу {self.addr} порт {self.port}')
                 send_message(client_socket, self.create_presence())
                 response = self.parse_response(get_message(client_socket))
-                print(response)
+                print(response[1])
+                print('----------------------------------------------------')
+                if response[0] == 200:
+                    receiver = threading.Thread(target=self.message_from_server, args=(client_socket,))
+                    receiver.daemon = True
+                    receiver.start()
 
-                receiver = threading.Thread(target=self.message_from_server, args=(client_socket,))
-                receiver.daemon = True
-                receiver.start()
+                    user_interface = threading.Thread(target=self.user_interactive, args=(client_socket,))
+                    user_interface.daemon = True
+                    user_interface.start()
 
-                user_interface = threading.Thread(target=self.user_interactive, args=(client_socket,))
-                user_interface.daemon = True
-                user_interface.start()
-
-                while True:
-                    time.sleep(1)
-                    if receiver.is_alive() and user_interface.is_alive():
-                        continue
-                    break
+                    while True:
+                        time.sleep(1)
+                        if receiver.is_alive() and user_interface.is_alive():
+                            continue
+                        break
         except gaierror:
             LOG.error('Неправильно введен Ip адрес')
         except ConnectionRefusedError as err:

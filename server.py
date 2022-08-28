@@ -12,6 +12,7 @@ from common.utils import get_message, send_message
 from common.variables import *
 from descriptors import CorrectPort
 from metaclasses import ClientVerifier, ServerVerifier
+from server_storage import ServerStorage
 
 LOG = logging.getLogger('server')
 
@@ -31,6 +32,9 @@ class Server(metaclass=ServerVerifier):
         else:
             self.addr = ''
         self.clients = []
+        self.server_db = ServerStorage()
+
+        self.clients_dict = {}
 
     @log
     def create_answer(self, message):
@@ -42,10 +46,11 @@ class Server(metaclass=ServerVerifier):
         """
         LOG.debug(f'Получено сообщение: {message}')
         if ACTION in message and message[ACTION] == PRESENCE and TIME in message and USER in message:
+            user_name = message[USER][ACCOUNT_NAME]
             answer = {
                 RESPONSE: 200,
                 TIME: datetime.datetime.now().timestamp(),
-                ALLERT: f'Приветствую вас - {message[USER][ACCOUNT_NAME]}'
+                ALLERT: f'Приветствую вас - {user_name}'
             }
         elif ACTION in message and message[
             ACTION] == MSG and TIME in message and FROM in message and TO in message:
@@ -75,6 +80,7 @@ class Server(metaclass=ServerVerifier):
             except:
                 LOG.debug(f'Клиент{sock.fileno()} {sock.getpeername()} отключился')
                 all_clients.remove(sock)
+                self.server_db.delete_active_user(self.clients_dict[sock])
         return responses
 
     def write_responses(self, requests, write_clients, all_clients):
@@ -93,15 +99,31 @@ class Server(metaclass=ServerVerifier):
             try:
                 for key in requests:
                     resp = requests[key]
-                    if requests[key].get(TO):
+                    recipient = requests[key].get(TO)
+                    if recipient and (self.clients_dict.get(sock) == recipient or recipient == '#') :
                         send_message(sock, self.create_answer(resp))
                     elif requests[key].get(ACTION) == PRESENCE:
                         if key == sock:
+                            user_name = requests[key][USER][ACCOUNT_NAME]
+                            if self.server_db.get_active_users(user_name):
+                                resp = {
+                                    RESPONSE: 400,
+                                    ERROR: 'Клиент с таким ником уже подключился к серверу'
+                                }
+                                sock.close
+                                all_clients.remove(sock)
+                                send_message(sock, resp)
+                                return
+                            else:
+                                self.clients_dict.update({sock:user_name})
+                                user_ip, user_port = sock.getpeername()
+                                self.server_db.user_login(user_name, user_ip, user_port)
                             send_message(sock, self.create_answer(resp))
                     elif requests[key].get(ACTION) == EXIT:
                         if key == sock:
-                            sock.close
                             all_clients.remove(sock)
+                            sock.close
+                            self.server_db.delete_active_user(requests[key][FROM])
                             LOG.debug(f'Клиент{sock.fileno()} {sock.getpeername()} отключился')
                             return
             except Exception as E:
@@ -109,6 +131,7 @@ class Server(metaclass=ServerVerifier):
                 print(E)
                 sock.close
                 all_clients.remove(sock)
+                self.server_db.delete_active_user(self.clients_dict[sock])
 
     def start(self):
         serv_socket = socket(AF_INET, SOCK_STREAM)
