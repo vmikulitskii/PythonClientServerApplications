@@ -3,6 +3,8 @@ from sqlalchemy.orm import mapper, sessionmaker
 import sqlite3
 from datetime import datetime
 
+from tabulate import tabulate
+
 
 class ServerStorage:
     class AllUser:
@@ -104,8 +106,10 @@ class ServerStorage:
 
     def delete_active_user(self, user_name):
         ''' Удаляет пользователя из активных '''
-        user = self.session.query(self.AllUser).filter_by(name=user_name).first()
-        user = self.session.query(self.ActiveUser).filter_by(user_id=user.id).first()
+        # user = self.session.query(self.AllUser).filter_by(name=user_name).first()
+        # user = self.session.query(self.ActiveUser).filter_by(user_id=user.id).first()
+        user = \
+        self.session.query(self.AllUser, self.ActiveUser).filter_by(name=user_name).join(self.ActiveUser).first()[1]
         self.session.delete(user)
         self.session.commit()
 
@@ -141,8 +145,18 @@ if __name__ == '__main__':
     server.user_login('Vanya', '127.0.0.1', '8888')
     full_data = server.session.query(server.AllUser.name, server.ActiveUser.ip, server.AllUser.last_login_date).join(
         server.AllUser).all()
-    print(full_data)
+    # print(full_data)
     server.user_login('Petya', '127.0.0.1', '8888')
     print('-------------')
     print(server.get_active_users(name='Vovas'))
-    # server.delete_active_user('Vovas')
+    server.delete_active_user('Vovas')
+
+    query = server.session.query(server.AllUser, server.ActiveUser).outerjoin(server.ActiveUser)
+    query = server.session.query(server.AllUser, server.ActiveUser).outerjoin(server.ActiveUser)
+    # print(query)
+    records = query
+    for user, active_user in records:
+        # print(user.name,active_user.ip,active_user.port,user.last_login_date)
+        print(user.name,
+              f'Подключился {datetime.strftime(user.last_login_date, "%d.%m.%Y %H:%M")}' if active_user else 'Не активен')
+        # print(user,active_user)
