@@ -40,12 +40,13 @@ class MyWindow(QMainWindow, Ui_MainWindow):
             item_3.setTextAlignment(Qt.AlignCenter)
 
             model.appendRow([item_0, item_1, item_2, item_3])
-
+            self.active_users_table.resizeColumnsToContents()
         return model
 
     def __init__(self):
         QMainWindow.__init__(self, parent=None)
         self.setupUi(self)
+
 
 
 class UserHistory(QDialog, History_Ui_Dialog):

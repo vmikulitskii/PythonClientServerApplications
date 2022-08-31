@@ -1,3 +1,6 @@
+import configparser
+import os.path
+
 from sqlalchemy import MetaData, Table, Column, Integer, String, create_engine, ForeignKey, DateTime
 from sqlalchemy.orm import mapper, sessionmaker
 import sqlite3
@@ -38,9 +41,16 @@ class ServerStorage:
             return f'User - {self.user_id} - {self.ip}- {self.port} - {self.date_time}'
 
     def __init__(self):
-        engine = create_engine('sqlite:///server_db.db3?check_same_thread=False', echo=False)
+        # engine = create_engine('sqlite:///server_db.db3?check_same_thread=False', echo=False)
+        config = configparser.ConfigParser()
+        config.read('server_config.ini')
+        db_path = config["SETTINGS"]["database_path"]
+        db_name = config["SETTINGS"]["database_file"]
+        db_abs_path = os.path.join(db_path,db_name)
+
+        engine = create_engine(f'sqlite:///{db_abs_path}?check_same_thread=False', echo=False)
         Session = sessionmaker(bind=engine)
-        """:type: sqlalchemy.orm.Session"""
+
         self.session = Session()
         self.meta_data = MetaData()
         clients_table = Table('all_users', self.meta_data,

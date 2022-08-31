@@ -1,3 +1,4 @@
+import configparser
 import select
 import time
 from pprint import pprint
@@ -5,6 +6,9 @@ from socket import socket, AF_INET, SOCK_STREAM
 import datetime
 import sys
 import logging
+
+import PyQt5.QtCore
+
 import log.server_log_config
 from common.decorators import log
 
@@ -13,28 +17,41 @@ from common.variables import *
 from descriptors import CorrectPort
 from metaclasses import ClientVerifier, ServerVerifier
 from server_storage import ServerStorage
+from server_gui import MyWindow, UserHistory, ServerSettings
+import threading
+from PyQt5 import QtWidgets
+from PyQt5.QtWidgets import QMainWindow, QDialog
 
 LOG = logging.getLogger('server')
 
 
-class Server(metaclass=ServerVerifier):
+class Server(threading.Thread, metaclass=ServerVerifier):
     port = CorrectPort()
 
     def __init__(self):
+        threading.Thread.__init__(self)
+        self.daemon = True
+
+        config = configparser.ConfigParser()
+        config.read('server_config.ini')
+
         if '-p' in sys.argv:
             index = sys.argv.index('-p')
             self.port = int(sys.argv[index + 1])
         else:
-            self.port = DEFAULT_PORT
+            self.port = int(config['SETTINGS']['default_port'])
         if '-a' in sys.argv:
             index = sys.argv.index('-a')
             self.addr = sys.argv[index + 1]
         else:
-            self.addr = ''
+            self.addr = config['SETTINGS']['listen_address']
+
         self.clients = []
         self.server_db = ServerStorage()
 
         self.clients_dict = {}
+
+        self.reload = False
 
     @log
     def create_answer(self, message):
@@ -81,6 +98,7 @@ class Server(metaclass=ServerVerifier):
                 LOG.debug(f'Клиент{sock.fileno()} {sock.getpeername()} отключился')
                 all_clients.remove(sock)
                 self.server_db.delete_active_user(self.clients_dict[sock])
+                self.reload = True
         return responses
 
     def write_responses(self, requests, write_clients, all_clients):
@@ -100,7 +118,7 @@ class Server(metaclass=ServerVerifier):
                 for key in requests:
                     resp = requests[key]
                     recipient = requests[key].get(TO)
-                    if recipient and (self.clients_dict.get(sock) == recipient or recipient == '#') :
+                    if recipient and (self.clients_dict.get(sock) == recipient or recipient == '#'):
                         send_message(sock, self.create_answer(resp))
                     elif requests[key].get(ACTION) == PRESENCE:
                         if key == sock:
@@ -115,9 +133,10 @@ class Server(metaclass=ServerVerifier):
                                 send_message(sock, resp)
                                 return
                             else:
-                                self.clients_dict.update({sock:user_name})
+                                self.clients_dict.update({sock: user_name})
                                 user_ip, user_port = sock.getpeername()
                                 self.server_db.user_login(user_name, user_ip, user_port)
+                                self.reload = True
                             send_message(sock, self.create_answer(resp))
                     elif requests[key].get(ACTION) == EXIT:
                         if key == sock:
@@ -125,6 +144,7 @@ class Server(metaclass=ServerVerifier):
                             sock.close
                             self.server_db.delete_active_user(requests[key][FROM])
                             LOG.debug(f'Клиент{sock.fileno()} {sock.getpeername()} отключился')
+                            self.reload = True
                             return
             except Exception as E:
                 LOG.debug(f'Клиент{sock.fileno()} {sock.getpeername()} отключился')
@@ -132,8 +152,18 @@ class Server(metaclass=ServerVerifier):
                 sock.close
                 all_clients.remove(sock)
                 self.server_db.delete_active_user(self.clients_dict[sock])
+                self.reload = True
 
-    def start(self):
+    def reload_active_users(self, window, history_window):
+        if self.reload:
+            window.active_users_table.setModel(window.get_active_users_model(self.server_db))
+            window.active_users_table.resizeColumnsToContents()
+            history_window.users_history_table.setModel(history_window.get_users_history_model(self.server_db))
+            history_window.users_history_table.resizeColumnsToContents()
+            print('Данные обновлены')
+            self.reload = False
+
+    def run(self):
         serv_socket = socket(AF_INET, SOCK_STREAM)
         serv_socket.bind((self.addr, self.port))
         serv_socket.settimeout(0.5)
@@ -167,6 +197,27 @@ class Server(metaclass=ServerVerifier):
 def main():
     server = Server()
     server.start()
+    app = QtWidgets.QApplication(sys.argv)
+    window = MyWindow()
+    window.active_users_table.setModel(window.get_active_users_model(server.server_db))
+    window.active_users_table.resizeColumnsToContents()
+    window.show()
+
+    history_window = UserHistory()
+    window.users_history.triggered.connect(history_window.show)
+    history_window.users_history_table.setModel(history_window.get_users_history_model(server.server_db))
+    history_window.users_history_table.resizeColumnsToContents()
+
+    window.reload.triggered.connect(lambda: server.reload_active_users(window, history_window))
+
+    setting_window = ServerSettings()
+    window.server_settings.triggered.connect(setting_window.show)
+
+    timer = PyQt5.QtCore.QTimer()
+    timer.timeout.connect(lambda: server.reload_active_users(window, history_window))
+    timer.start(1000)
+
+    sys.exit(app.exec_())
 
 
 if __name__ == "__main__":
