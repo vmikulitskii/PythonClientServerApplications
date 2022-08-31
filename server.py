@@ -14,6 +14,7 @@ from common.decorators import log
 
 from common.utils import get_message, send_message
 from common.variables import *
+from common.variables import ADD_CONTACT
 from descriptors import CorrectPort
 from metaclasses import ClientVerifier, ServerVerifier
 from server_storage import ServerStorage
@@ -146,6 +147,13 @@ class Server(threading.Thread, metaclass=ServerVerifier):
                             LOG.debug(f'Клиент{sock.fileno()} {sock.getpeername()} отключился')
                             self.reload = True
                             return
+                    elif requests[key].get(ACTION) == ADD_CONTACT:
+                        if key == sock:
+                            result = self.server_db.add_new_contact(requests[key][FROM],requests[key][USER])
+                            resp = {
+                                RESPONSE: result
+                            }
+                            send_message(sock,resp)
             except Exception as E:
                 LOG.debug(f'Клиент{sock.fileno()} {sock.getpeername()} отключился')
                 print(E)

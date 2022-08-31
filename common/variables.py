@@ -24,6 +24,8 @@ FROM = 'from'
 MESSAGE = 'message'
 TO = 'to'
 EXIT = 'exit'
+ADD_CONTACT = 'add_contact'
+DEL_CONTACT = 'del_contact'
 
 # Прочие ключи, используемые в протоколе
 PRESENCE = 'presence'

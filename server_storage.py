@@ -3,6 +3,7 @@ import os.path
 
 from sqlalchemy import MetaData, Table, Column, Integer, String, create_engine, ForeignKey, DateTime
 from sqlalchemy.orm import mapper, sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
 import sqlite3
 from datetime import datetime
 
@@ -40,17 +41,26 @@ class ServerStorage:
         def __repr__(self):
             return f'User - {self.user_id} - {self.ip}- {self.port} - {self.date_time}'
 
+    class Contact():
+
+        def __init__(self, user_1, user_2):
+            self.user_1_id = user_1
+            self.user_2_id = user_2
+
+        def __repr__(self):
+            return f'{self.user_1} - {self.user_2}'
+
     def __init__(self):
         # engine = create_engine('sqlite:///server_db.db3?check_same_thread=False', echo=False)
         config = configparser.ConfigParser()
         config.read('server_config.ini')
         db_path = config["SETTINGS"]["database_path"]
         db_name = config["SETTINGS"]["database_file"]
-        db_abs_path = os.path.join(db_path,db_name)
+        db_abs_path = os.path.join(db_path, db_name)
 
         engine = create_engine(f'sqlite:///{db_abs_path}?check_same_thread=False', echo=False)
         Session = sessionmaker(bind=engine)
-
+        # self.Base.metadata.create_all(engine)
         self.session = Session()
         self.meta_data = MetaData()
         clients_table = Table('all_users', self.meta_data,
@@ -71,11 +81,17 @@ class ServerStorage:
                               Column('port', String),
                               Column('date_time', DateTime)
                               )
+        contacts = Table('contacts', self.meta_data,
+                         Column('id', Integer, primary_key=True),
+                         Column('user_1_id', Integer, ForeignKey('all_users.id')),
+                         Column('user_2_id', Integer, ForeignKey('all_users.id'))
+                         )
 
         self.meta_data.create_all(engine)
         mapper(self.AllUser, clients_table)
         mapper(self.ActiveUser, active_users)
         mapper(self.LoginHistory, login_history)
+        mapper(self.Contact, contacts)
         self.clear_active_users()
 
     def create_user(self, name):
@@ -119,7 +135,7 @@ class ServerStorage:
         # user = self.session.query(self.AllUser).filter_by(name=user_name).first()
         # user = self.session.query(self.ActiveUser).filter_by(user_id=user.id).first()
         user = \
-        self.session.query(self.AllUser, self.ActiveUser).filter_by(name=user_name).join(self.ActiveUser).first()[1]
+            self.session.query(self.AllUser, self.ActiveUser).filter_by(name=user_name).join(self.ActiveUser).first()[1]
         self.session.delete(user)
         self.session.commit()
 
@@ -144,6 +160,22 @@ class ServerStorage:
 
         return users.all()
 
+    def add_new_contact(self, user_1, user_2):
+        user_1 = self.session.query(self.AllUser).filter_by(name=user_1).first()
+        user_2 = self.session.query(self.AllUser).filter_by(name=user_2).first()
+
+        if user_1 and user_2:
+            contact = self.session.query(self.Contact).filter_by(user_1_id=user_1.id, user_2_id=user_2.id)
+            if contact.count() < 1:
+                contact = self.Contact(user_1.id, user_2.id)
+                self.session.add(contact)
+                self.session.commit()
+                return 201
+            else:
+                return 402
+        else:
+            return 401
+
 
 if __name__ == '__main__':
     server = ServerStorage()
@@ -159,14 +191,19 @@ if __name__ == '__main__':
     server.user_login('Petya', '127.0.0.1', '8888')
     print('-------------')
     print(server.get_active_users(name='Vovas'))
-    server.delete_active_user('Vovas')
+    # server.delete_active_user('Vovas')
 
     query = server.session.query(server.AllUser, server.ActiveUser).outerjoin(server.ActiveUser)
     query = server.session.query(server.AllUser, server.ActiveUser).outerjoin(server.ActiveUser)
     # print(query)
     records = query
-    for user, active_user in records:
-        # print(user.name,active_user.ip,active_user.port,user.last_login_date)
-        print(user.name,
-              f'Подключился {datetime.strftime(user.last_login_date, "%d.%m.%Y %H:%M")}' if active_user else 'Не активен')
-        # print(user,active_user)
+    # for user, active_user in records:
+    #     # print(user.name,active_user.ip,active_user.port,user.last_login_date)
+    #     print(user.name,
+    #           f'Подключился {datetime.strftime(user.last_login_date, "%d.%m.%Y %H:%M")}' if active_user else 'Не активен')
+    #     # print(user,active_user)
+
+
+
+    resp = server.add_new_contact('User-2','User-5')
+    print(resp)

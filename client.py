@@ -10,6 +10,7 @@ import threading
 
 from common.variables import *
 from common.utils import get_message, send_message
+from common.variables import ADD_CONTACT
 from descriptors import CorrectPort
 from metaclasses import ClientVerifier, ServerVerifier
 
@@ -66,10 +67,10 @@ class Client(metaclass=ClientVerifier):
         """
         if response.get(RESPONSE) == 200:
             LOG.debug(f'Получен ответ от сервера -  {response[RESPONSE]}: {response[ALLERT]}')
-            return response[RESPONSE],response[ALLERT]
+            return response[RESPONSE], response[ALLERT]
         elif response.get(RESPONSE) == 400:
             LOG.debug(f'Получен ответ от сервера - {response[RESPONSE]}: {response[ERROR]}')
-            return response[RESPONSE],response[ERROR]
+            return response[RESPONSE], response[ERROR]
 
     def message_from_server(self, client_sock):
         while True:
@@ -80,6 +81,18 @@ class Client(metaclass=ClientVerifier):
                         LOG.debug(f'Получено сообщение от сервера - {message[MESSAGE]}')
                         print(f'\nПолучено сообщение от {message[FROM]} - {message[MESSAGE]}')
                         print('Введите команду: ')
+                elif message.get(RESPONSE) == 201:
+                    LOG.debug(f'Получено сообщение от сервера - {message[RESPONSE]}')
+                    print(f'\nНовый контакт добавлен')
+
+                elif message.get(RESPONSE) == 401:
+                    LOG.debug(f'Получено сообщение от сервера - {message[RESPONSE]}')
+                    print(f'\nПользователь с таким именем не зарегистрирован на сервере')
+
+                elif message.get(RESPONSE) == 402:
+                    LOG.debug(f'Получено сообщение от сервера - {message[RESPONSE]}')
+                    print(f'\nПользователь с таким именем уже в вашем контакт листе')
+
             except OSError:
                 print(f'Потеряно соединение с сервером.')
                 break
@@ -111,11 +124,22 @@ class Client(metaclass=ClientVerifier):
         LOG.info('Cоздано  EXIT MESSAGE сообщение')
         return msg
 
+    def add_contact(self, new_contact):
+        msg = {
+            ACTION: ADD_CONTACT,
+            TIME: datetime.datetime.now().timestamp(),
+            FROM: self.akk_name,
+            USER: new_contact
+        }
+        LOG.info('Cоздано add_contact сообщение')
+        return msg
+
     @staticmethod
     def print_help():
         """Функция выводящяя справку по использованию"""
         print('Поддерживаемые команды:')
         print('message - отправить сообщение.')
+        print('add contact - добавить новый контакт')
         print('help - вывести подсказки по командам')
         print('exit - выход из программы')
 
@@ -136,6 +160,10 @@ class Client(metaclass=ClientVerifier):
                 break
             elif command == 'help':
                 self.print_help()
+            elif command =='add contact':
+                name = input('Введите имя пользователя:')
+                send_message(client_socket,self.add_contact(name))
+                time.sleep(0.5)
             else:
                 print('Команда не распознана')
 
