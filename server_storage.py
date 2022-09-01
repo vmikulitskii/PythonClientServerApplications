@@ -7,7 +7,7 @@ from sqlalchemy.ext.declarative import declarative_base
 import sqlite3
 from datetime import datetime
 
-from tabulate import tabulate
+
 
 
 class ServerStorage:
@@ -176,6 +176,21 @@ class ServerStorage:
         else:
             return 401
 
+    def delete_new_contact(self, user_1, user_2):
+        user_1 = self.session.query(self.AllUser).filter_by(name=user_1).first()
+        user_2 = self.session.query(self.AllUser).filter_by(name=user_2).first()
+
+        if user_2:
+            contact = self.session.query(self.Contact).filter_by(user_1_id=user_1.id, user_2_id=user_2.id).first()
+            if contact:
+                self.session.delete(contact)
+                self.session.commit()
+                return 203
+            else:
+                return 403
+        else:
+            return 401
+
 
 if __name__ == '__main__':
     server = ServerStorage()
@@ -203,7 +218,7 @@ if __name__ == '__main__':
     #           f'Подключился {datetime.strftime(user.last_login_date, "%d.%m.%Y %H:%M")}' if active_user else 'Не активен')
     #     # print(user,active_user)
 
-
-
-    resp = server.add_new_contact('User-2','User-5')
+    resp = server.add_new_contact('User-2', 'User-5')
+    print(resp)
+    resp = server.delete_new_contact('User-2', 'User-5')
     print(resp)

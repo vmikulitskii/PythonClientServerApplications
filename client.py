@@ -10,7 +10,7 @@ import threading
 
 from common.variables import *
 from common.utils import get_message, send_message
-from common.variables import ADD_CONTACT
+from common.variables import ADD_CONTACT, DEL_CONTACT
 from descriptors import CorrectPort
 from metaclasses import ClientVerifier, ServerVerifier
 
@@ -85,6 +85,10 @@ class Client(metaclass=ClientVerifier):
                     LOG.debug(f'Получено сообщение от сервера - {message[RESPONSE]}')
                     print(f'\nНовый контакт добавлен')
 
+                elif message.get(RESPONSE) == 203:
+                    LOG.debug(f'Получено сообщение от сервера - {message[RESPONSE]}')
+                    print(f'\nПользователь удалён из контакт листа')
+
                 elif message.get(RESPONSE) == 401:
                     LOG.debug(f'Получено сообщение от сервера - {message[RESPONSE]}')
                     print(f'\nПользователь с таким именем не зарегистрирован на сервере')
@@ -92,6 +96,10 @@ class Client(metaclass=ClientVerifier):
                 elif message.get(RESPONSE) == 402:
                     LOG.debug(f'Получено сообщение от сервера - {message[RESPONSE]}')
                     print(f'\nПользователь с таким именем уже в вашем контакт листе')
+
+                elif message.get(RESPONSE) == 403:
+                    LOG.debug(f'Получено сообщение от сервера - {message[RESPONSE]}')
+                    print(f'\nПользователь с таким именем отсутствует в вашем контакт листе')
 
             except OSError:
                 print(f'Потеряно соединение с сервером.')
@@ -134,12 +142,23 @@ class Client(metaclass=ClientVerifier):
         LOG.info('Cоздано add_contact сообщение')
         return msg
 
+    def del_contact(self, new_contact):
+        msg = {
+            ACTION: DEL_CONTACT,
+            TIME: datetime.datetime.now().timestamp(),
+            FROM: self.akk_name,
+            USER: new_contact
+        }
+        LOG.info('Cоздано dell_contact сообщение')
+        return msg
+
     @staticmethod
     def print_help():
         """Функция выводящяя справку по использованию"""
         print('Поддерживаемые команды:')
         print('message - отправить сообщение.')
         print('add contact - добавить новый контакт')
+        print('del contact - удалить пользователя из контакт листа')
         print('help - вывести подсказки по командам')
         print('exit - выход из программы')
 
@@ -163,6 +182,10 @@ class Client(metaclass=ClientVerifier):
             elif command =='add contact':
                 name = input('Введите имя пользователя:')
                 send_message(client_socket,self.add_contact(name))
+                time.sleep(0.5)
+            elif command =='del contact':
+                name = input('Введите имя пользователя:')
+                send_message(client_socket,self.del_contact(name))
                 time.sleep(0.5)
             else:
                 print('Команда не распознана')
