@@ -26,7 +26,7 @@ TO = 'to'
 EXIT = 'exit'
 ADD_CONTACT = 'add_contact'
 DEL_CONTACT = 'del_contact'
-
+GET_CONTACTS = "get_contacts"
 # Прочие ключи, используемые в протоколе
 PRESENCE = 'presence'
 RESPONSE = 'response'

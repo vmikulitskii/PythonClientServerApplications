@@ -14,7 +14,7 @@ from common.decorators import log
 
 from common.utils import get_message, send_message
 from common.variables import *
-from common.variables import ADD_CONTACT, DEL_CONTACT
+from common.variables import ADD_CONTACT, DEL_CONTACT, GET_CONTACTS
 from descriptors import CorrectPort
 from metaclasses import ClientVerifier, ServerVerifier
 from server_storage import ServerStorage
@@ -159,6 +159,14 @@ class Server(threading.Thread, metaclass=ServerVerifier):
                             result = self.server_db.delete_new_contact(requests[key][FROM],requests[key][USER])
                             resp = {
                                 RESPONSE: result
+                            }
+                            send_message(sock,resp)
+                    elif requests[key].get(ACTION) == GET_CONTACTS:
+                        if key == sock:
+                            result = self.server_db.get_contacts(requests[key][FROM])
+                            resp = {
+                                RESPONSE: 202,
+                                ALLERT:result
                             }
                             send_message(sock,resp)
             except Exception as E:

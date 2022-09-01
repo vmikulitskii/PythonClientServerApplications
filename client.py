@@ -10,7 +10,7 @@ import threading
 
 from common.variables import *
 from common.utils import get_message, send_message
-from common.variables import ADD_CONTACT, DEL_CONTACT
+from common.variables import ADD_CONTACT, DEL_CONTACT, GET_CONTACTS
 from descriptors import CorrectPort
 from metaclasses import ClientVerifier, ServerVerifier
 
@@ -84,6 +84,15 @@ class Client(metaclass=ClientVerifier):
                 elif message.get(RESPONSE) == 201:
                     LOG.debug(f'Получено сообщение от сервера - {message[RESPONSE]}')
                     print(f'\nНовый контакт добавлен')
+                elif message.get(RESPONSE) == 202:
+                    LOG.debug(f'Получено сообщение от сервера - {message[RESPONSE]}')
+                    contacts = message.get(ALLERT)
+                    if contacts:
+                        print(f'Ваш список контактов:')
+                        for contact in contacts:
+                            print(contact)
+                    else:
+                        print('Ваш список контактов пуст')
 
                 elif message.get(RESPONSE) == 203:
                     LOG.debug(f'Получено сообщение от сервера - {message[RESPONSE]}')
@@ -152,6 +161,15 @@ class Client(metaclass=ClientVerifier):
         LOG.info('Cоздано dell_contact сообщение')
         return msg
 
+    def get_contacts(self):
+        msg = {
+            ACTION: GET_CONTACTS,
+            TIME: datetime.datetime.now().timestamp(),
+            FROM: self.akk_name
+        }
+        LOG.info('Cоздано get_contacts сообщение')
+        return msg
+
     @staticmethod
     def print_help():
         """Функция выводящяя справку по использованию"""
@@ -159,6 +177,7 @@ class Client(metaclass=ClientVerifier):
         print('message - отправить сообщение.')
         print('add contact - добавить новый контакт')
         print('del contact - удалить пользователя из контакт листа')
+        print('get contacts - запросить контакт лист')
         print('help - вывести подсказки по командам')
         print('exit - выход из программы')
 
@@ -179,13 +198,16 @@ class Client(metaclass=ClientVerifier):
                 break
             elif command == 'help':
                 self.print_help()
-            elif command =='add contact':
+            elif command == 'add contact':
                 name = input('Введите имя пользователя:')
-                send_message(client_socket,self.add_contact(name))
+                send_message(client_socket, self.add_contact(name))
                 time.sleep(0.5)
-            elif command =='del contact':
+            elif command == 'del contact':
                 name = input('Введите имя пользователя:')
-                send_message(client_socket,self.del_contact(name))
+                send_message(client_socket, self.del_contact(name))
+                time.sleep(0.5)
+            elif command == 'get contacts':
+                send_message(client_socket, self.get_contacts())
                 time.sleep(0.5)
             else:
                 print('Команда не распознана')

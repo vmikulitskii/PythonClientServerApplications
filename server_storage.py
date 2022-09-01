@@ -8,8 +8,6 @@ import sqlite3
 from datetime import datetime
 
 
-
-
 class ServerStorage:
     class AllUser:
         def __init__(self, name, last_login_date):
@@ -48,7 +46,7 @@ class ServerStorage:
             self.user_2_id = user_2
 
         def __repr__(self):
-            return f'{self.user_1} - {self.user_2}'
+            return f'{self.user_1_id} - {self.user_2_id}'
 
     def __init__(self):
         # engine = create_engine('sqlite:///server_db.db3?check_same_thread=False', echo=False)
@@ -191,6 +189,18 @@ class ServerStorage:
         else:
             return 401
 
+    def get_contacts(self, user_name):
+        """
+        Получаем имя пользователя, возвращаем список имен его контактов
+        :param user_name: str
+        :return:
+        """
+        user = self.session.query(self.AllUser).filter_by(name=user_name).first()
+        user_contacts = self.session.query(self.Contact, self.AllUser).filter_by(user_1_id=user.id).join(self.AllUser,
+                                                                                                    self.AllUser.id == self.Contact.user_2_id).all()
+        result = [contact[1].name for contact in user_contacts]
+        return result
+
 
 if __name__ == '__main__':
     server = ServerStorage()
@@ -222,3 +232,4 @@ if __name__ == '__main__':
     print(resp)
     resp = server.delete_new_contact('User-2', 'User-5')
     print(resp)
+    contacts = server.get_contacts('User-17')
