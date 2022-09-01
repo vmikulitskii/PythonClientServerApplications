@@ -117,58 +117,74 @@ class Server(threading.Thread, metaclass=ServerVerifier):
         for sock in write_clients:
             try:
                 for key in requests:
-                    resp = requests[key]
-                    recipient = requests[key].get(TO)
-                    if recipient and (self.clients_dict.get(sock) == recipient or recipient == '#'):
-                        send_message(sock, self.create_answer(resp))
-                    elif requests[key].get(ACTION) == PRESENCE:
+                    request = requests[key]
+                    if request.get(ACTION) == MSG:
+                        recipient = request.get(TO)
+                        sender = request.get(FROM)
+                        if recipient and (self.clients_dict.get(sock) == recipient or recipient == '#'):
+                            send_message(sock, self.create_answer(request))
+
+                        elif sender and self.clients_dict.get(sock) == sender:
+                            if recipient in self.clients_dict.values():
+                                answer = {
+                                    RESPONSE: 205,
+                                    ALLERT: 'Сообщение отправлено'
+                                }
+                            else:
+                                answer = {
+                                    RESPONSE: 405,
+                                    ERROR: 'Сообщение не отправлено. Клиент с таким ником не подключен к серверу'
+                                }
+                            send_message(sock, answer)
+
+                    elif request.get(ACTION) == PRESENCE:
                         if key == sock:
-                            user_name = requests[key][USER][ACCOUNT_NAME]
+                            user_name = request[USER][ACCOUNT_NAME]
                             if self.server_db.get_active_users(user_name):
-                                resp = {
+                                answer = {
                                     RESPONSE: 400,
                                     ERROR: 'Клиент с таким ником уже подключился к серверу'
                                 }
                                 sock.close
                                 all_clients.remove(sock)
-                                send_message(sock, resp)
+                                send_message(sock, answer)
                                 return
                             else:
                                 self.clients_dict.update({sock: user_name})
                                 user_ip, user_port = sock.getpeername()
                                 self.server_db.user_login(user_name, user_ip, user_port)
                                 self.reload = True
-                            send_message(sock, self.create_answer(resp))
-                    elif requests[key].get(ACTION) == EXIT:
+                            send_message(sock, self.create_answer(request))
+                    elif request.get(ACTION) == EXIT:
                         if key == sock:
                             all_clients.remove(sock)
                             sock.close
-                            self.server_db.delete_active_user(requests[key][FROM])
+                            self.server_db.delete_active_user(request[FROM])
                             LOG.debug(f'Клиент{sock.fileno()} {sock.getpeername()} отключился')
                             self.reload = True
                             return
-                    elif requests[key].get(ACTION) == ADD_CONTACT:
+                    elif request.get(ACTION) == ADD_CONTACT:
                         if key == sock:
-                            result = self.server_db.add_new_contact(requests[key][FROM],requests[key][USER])
-                            resp = {
+                            result = self.server_db.add_new_contact(request[FROM],request[USER])
+                            answer = {
                                 RESPONSE: result
                             }
-                            send_message(sock,resp)
-                    elif requests[key].get(ACTION) == DEL_CONTACT:
+                            send_message(sock, answer)
+                    elif request.get(ACTION) == DEL_CONTACT:
                         if key == sock:
-                            result = self.server_db.delete_new_contact(requests[key][FROM],requests[key][USER])
-                            resp = {
+                            result = self.server_db.delete_new_contact(request[FROM],request[USER])
+                            answer = {
                                 RESPONSE: result
                             }
-                            send_message(sock,resp)
-                    elif requests[key].get(ACTION) == GET_CONTACTS:
+                            send_message(sock, answer)
+                    elif request.get(ACTION) == GET_CONTACTS:
                         if key == sock:
-                            result = self.server_db.get_contacts(requests[key][FROM])
-                            resp = {
+                            result = self.server_db.get_contacts(request[FROM])
+                            answer = {
                                 RESPONSE: 202,
                                 ALLERT:result
                             }
-                            send_message(sock,resp)
+                            send_message(sock, answer)
             except Exception as E:
                 LOG.debug(f'Клиент{sock.fileno()} {sock.getpeername()} отключился')
                 print(E)

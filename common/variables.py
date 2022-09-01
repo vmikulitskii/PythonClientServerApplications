@@ -32,6 +32,9 @@ PRESENCE = 'presence'
 RESPONSE = 'response'
 ERROR = 'error'
 
+SENT ='sent'
+RECEIVED ='received'
+
 # Имя пользователя по умолчанию
 DEFAULT_USER = 'Guest'
 

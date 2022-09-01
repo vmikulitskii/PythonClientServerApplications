@@ -10,9 +10,10 @@ import threading
 
 from common.variables import *
 from common.utils import get_message, send_message
-from common.variables import ADD_CONTACT, DEL_CONTACT, GET_CONTACTS
+from common.variables import ADD_CONTACT, DEL_CONTACT, GET_CONTACTS, RECEIVED, SENT
 from descriptors import CorrectPort
 from metaclasses import ClientVerifier, ServerVerifier
+from client_storage import ClientStorage
 
 LOG = logging.getLogger('client')
 
@@ -38,6 +39,8 @@ class Client(metaclass=ClientVerifier):
 
         except IndexError:
             LOG.error('Не введен ip адрес сервера')
+
+        self.client_db = ClientStorage(self.akk_name)
 
     @log
     def create_presence(self):
@@ -80,10 +83,11 @@ class Client(metaclass=ClientVerifier):
                     if message.get(TO) == self.akk_name or message.get(TO) == '#':
                         LOG.debug(f'Получено сообщение от сервера - {message[MESSAGE]}')
                         print(f'\nПолучено сообщение от {message[FROM]} - {message[MESSAGE]}')
+                        self.client_db.add_message(message[FROM], message[MESSAGE], RECEIVED)
                         print('Введите команду: ')
                 elif message.get(RESPONSE) == 201:
                     LOG.debug(f'Получено сообщение от сервера - {message[RESPONSE]}')
-                    print(f'\nНовый контакт добавлен')
+                    print(f'\nНовый контакт добавлен на сервере')
                 elif message.get(RESPONSE) == 202:
                     LOG.debug(f'Получено сообщение от сервера - {message[RESPONSE]}')
                     contacts = message.get(ALLERT)
@@ -96,7 +100,11 @@ class Client(metaclass=ClientVerifier):
 
                 elif message.get(RESPONSE) == 203:
                     LOG.debug(f'Получено сообщение от сервера - {message[RESPONSE]}')
-                    print(f'\nПользователь удалён из контакт листа')
+                    print(f'\nПользователь удалён из серверного контакт листа')
+
+                elif message.get(RESPONSE) == 205:
+                    LOG.debug(f'Получено сообщение от сервера - {message[RESPONSE]}')
+                    print(f'\n{message.get(ALLERT)}')
 
                 elif message.get(RESPONSE) == 401:
                     LOG.debug(f'Получено сообщение от сервера - {message[RESPONSE]}')
@@ -109,6 +117,10 @@ class Client(metaclass=ClientVerifier):
                 elif message.get(RESPONSE) == 403:
                     LOG.debug(f'Получено сообщение от сервера - {message[RESPONSE]}')
                     print(f'\nПользователь с таким именем отсутствует в вашем контакт листе')
+
+                elif message.get(RESPONSE) == 405:
+                    LOG.debug(f'Получено сообщение от сервера - {message[RESPONSE]}')
+                    print(f'\n{message.get(ERROR)}')
 
             except OSError:
                 print(f'Потеряно соединение с сервером.')
@@ -148,6 +160,7 @@ class Client(metaclass=ClientVerifier):
             FROM: self.akk_name,
             USER: new_contact
         }
+        self.client_db.add_contact(new_contact)
         LOG.info('Cоздано add_contact сообщение')
         return msg
 
@@ -189,6 +202,7 @@ class Client(metaclass=ClientVerifier):
                 to_user = input('Введите получателя сообщения: ')
                 text = input('Введите сообщение: ')
                 send_message(client_socket, self.create_message(text, to_user))
+                self.client_db.add_message(to_user, text, SENT)
                 time.sleep(0.5)
             elif command == 'exit':
                 send_message(client_socket, self.create_exit_message())
@@ -205,6 +219,7 @@ class Client(metaclass=ClientVerifier):
             elif command == 'del contact':
                 name = input('Введите имя пользователя:')
                 send_message(client_socket, self.del_contact(name))
+                self.client_db.del_contact(name)
                 time.sleep(0.5)
             elif command == 'get contacts':
                 send_message(client_socket, self.get_contacts())
