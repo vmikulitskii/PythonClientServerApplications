@@ -14,6 +14,8 @@ from common.variables import ADD_CONTACT, DEL_CONTACT, GET_CONTACTS, RECEIVED, S
 from descriptors import CorrectPort
 from metaclasses import ClientVerifier, ServerVerifier
 from client_storage import ClientStorage
+from client_gui import MyWindow
+from PyQt5 import QtWidgets
 
 LOG = logging.getLogger('client')
 
@@ -23,7 +25,8 @@ class Client(metaclass=ClientVerifier):
 
     def __init__(self):
         try:
-            self.addr = sys.argv[1]
+            # self.addr = sys.argv[1]
+            self.addr = '127.0.0.1'
 
             if '-p' in sys.argv:
                 index = sys.argv.index('-p')
@@ -36,6 +39,7 @@ class Client(metaclass=ClientVerifier):
                 self.akk_name = sys.argv[index + 1]
             else:
                 self.akk_name = DEFAULT_USER
+                self.akk_name = 'User-1'
 
         except IndexError:
             LOG.error('Не введен ip адрес сервера')
@@ -227,6 +231,27 @@ class Client(metaclass=ClientVerifier):
             else:
                 print('Команда не распознана')
 
+    def start_window(self,client_socket):
+        app = QtWidgets.QApplication(sys.argv)
+        window = MyWindow(self.client_db)
+        window.view_contacts()
+
+        window.make_connection(window.listContacts)
+        window.show()
+        window.sendButton.clicked.connect(
+            lambda: self.send_new_message(client_socket,window)
+        )
+        sys.exit(app.exec_())
+
+    def send_new_message(self,client_socket,window):
+        to_user = window.activ_contact_name
+        text = window.textSendEdit.toPlainText()
+        window.textSendEdit.clear()
+        send_message(client_socket, self.create_message(text, to_user))
+        self.client_db.add_message(to_user, text, SENT)
+        window.load_last_history(to_user)
+        time.sleep(0.5)
+
     def start(self):
         try:
             with socket(AF_INET, SOCK_STREAM) as client_socket:
@@ -241,13 +266,18 @@ class Client(metaclass=ClientVerifier):
                     receiver.daemon = True
                     receiver.start()
 
-                    user_interface = threading.Thread(target=self.user_interactive, args=(client_socket,))
-                    user_interface.daemon = True
-                    user_interface.start()
+                    # user_interface = threading.Thread(target=self.user_interactive, args=(client_socket,))
+                    # user_interface.daemon = True
+                    # user_interface.start()
+
+                    start_window = threading.Thread(target=self.start_window, args=(client_socket,))
+                    start_window.daemon = True
+                    start_window.start()
 
                     while True:
                         time.sleep(1)
-                        if receiver.is_alive() and user_interface.is_alive():
+                        # if receiver.is_alive() and user_interface.is_alive() and start_window.is_alive():
+                        if receiver.is_alive() and start_window.is_alive():
                             continue
                         break
         except gaierror:
@@ -259,6 +289,7 @@ class Client(metaclass=ClientVerifier):
 @log
 def main():
     client = Client()
+    # client.start_window()
     client.start()
 
 
