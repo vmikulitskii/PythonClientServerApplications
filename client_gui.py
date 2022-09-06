@@ -35,7 +35,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         self.client_db = database
         self.activ_contact_name = None
 
-        self.listContacts.itemClicked.connect(self.on_change_contact)
+        self.listContacts.itemDoubleClicked.connect(self.on_change_contact)
 
     def on_change_contact(self, value):
         self.contact_selected.emit(value)
@@ -80,7 +80,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         print(f'Активирован контакт - {self.activ_contact_name}')
 
     def make_connection(self,contact_list):
-        contact_list.itemClicked.connect(self.get_user_message)
+        contact_list.itemDoubleClicked.connect(self.get_user_message)
 
 
 def main():
