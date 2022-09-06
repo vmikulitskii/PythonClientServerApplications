@@ -4,6 +4,9 @@ from socket import socket, AF_INET, SOCK_STREAM, gaierror
 import datetime
 import sys
 import logging
+
+import PyQt5.QtWidgets
+
 import log.client_log_config
 from common.decorators import log
 import threading
@@ -14,9 +17,9 @@ from common.variables import ADD_CONTACT, DEL_CONTACT, GET_CONTACTS, RECEIVED, S
 from descriptors import CorrectPort
 from metaclasses import ClientVerifier, ServerVerifier
 from client_storage import ClientStorage
-from client_gui import MyWindow
+from client_gui import MyWindow, ArrivedMessage, NewLocalContact
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot,QObject
+from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QObject
 
 LOG = logging.getLogger('client')
 
@@ -24,6 +27,7 @@ LOG = logging.getLogger('client')
 class Client(QObject):
     port = CorrectPort()
     message_arrived = pyqtSignal(str)
+
     def __init__(self):
         QObject.__init__(self)
         try:
@@ -47,6 +51,10 @@ class Client(QObject):
             LOG.error('Не введен ip адрес сервера')
 
         self.client_db = ClientStorage(self.akk_name)
+        self.app = QtWidgets.QApplication(sys.argv)
+        self.window = MyWindow(self.client_db)
+        self.dialog = ArrivedMessage()
+        self.new_local_contact = NewLocalContact()
         self.client_socket = None
 
     @log
@@ -258,9 +266,23 @@ class Client(QObject):
         time.sleep(0.5)
 
     @pyqtSlot(str)
-    def new_message_allert(self,user_name):
+    def new_message_allert(self, user_name):
         if self.window.activ_contact_name == user_name:
             self.window.load_last_history(user_name)
+        else:
+            self.dialog.userNamelabel.setText(user_name)
+            self.dialog.show()
+            self.dialog.buttonBox.accepted.connect(lambda: self.select_chat(user_name))
+
+    def select_chat(self, user_name):
+        self.window.load_last_history(user_name)
+        self.window.activ_contact_name = user_name
+
+    def add_new_local_contact(self):
+        user_name = self.new_local_contact.userNameEdit.text()
+        self.client_db.add_contact(user_name)
+        self.window.listContacts.clear()
+        self.window.view_contacts()
 
 
     def start(self):
@@ -282,22 +304,24 @@ class Client(QObject):
                     # user_interface.daemon = True
                     # user_interface.start()
 
-                    app = QtWidgets.QApplication(sys.argv)
-                    self.window = MyWindow(self.client_db)
-                    self.window.view_contacts()
+                    # app = QtWidgets.QApplication(sys.argv)
 
+                    self.window.view_contacts()
                     self.window.make_connection(self.window.listContacts)
                     self.window.show()
                     self.window.sendButton.clicked.connect(
                         lambda: self.send_new_message(self.client_socket)
                     )
+                    self.window.actionNewContact.triggered.connect(self.new_local_contact.show)
                     self.message_arrived.connect(self.new_message_allert)
-                    sys.exit(app.exec_())
+                    self.new_local_contact.buttonBox.accepted.connect(self.add_new_local_contact)
+
+                    sys.exit(self.app.exec_())
 
                     # while True:
                     #     time.sleep(1)
                     #     # if receiver.is_alive() and user_interface.is_alive() and start_window.is_alive():
-                    #     if receiver.is_alive() and start_window.is_alive():
+                    #     if receiver.is_alive():
                     #         continue
                     #     break
         except gaierror:

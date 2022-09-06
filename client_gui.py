@@ -8,6 +8,8 @@ from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
 from client_storage import ClientStorage
 
 from client_gui_main_ui import Ui_MainWindow
+from client_gui_arrived_message_ui import Ui_newMesaageDialog
+from client_gui_new_localcontact_ui import Ui_addNewLocalContactDialog
 from common.variables import SENT, RECEIVED
 
 
@@ -79,13 +81,27 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         self.tableMessage.scrollToBottom()
 
     @pyqtSlot(QtWidgets.QListWidgetItem)
-    def get_user_message(self,contact_obj):
+    def get_user_message(self, contact_obj):
         self.load_last_history((contact_obj.text()))
         self.activ_contact_name = contact_obj.text()
         print(f'Активирован контакт - {self.activ_contact_name}')
 
-    def make_connection(self,contact_list):
+    def make_connection(self, contact_list):
         contact_list.itemDoubleClicked.connect(self.get_user_message)
+
+
+class ArrivedMessage(QDialog, Ui_newMesaageDialog):
+
+    def __init__(self):
+        super().__init__()
+        self.setupUi(self)
+
+
+class NewLocalContact(QDialog, Ui_addNewLocalContactDialog):
+
+    def __init__(self):
+        super().__init__()
+        self.setupUi(self)
 
 
 def main():
@@ -96,6 +112,8 @@ def main():
     window.make_connection(window.listContacts)
     window.show()
     # window.load_last_history('User-8')
+    am = ArrivedMessage('Vasia')
+    am.show()
 
     window.view_contacts()
 
