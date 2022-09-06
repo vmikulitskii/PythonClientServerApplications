@@ -16,14 +16,16 @@ from metaclasses import ClientVerifier, ServerVerifier
 from client_storage import ClientStorage
 from client_gui import MyWindow
 from PyQt5 import QtWidgets
+from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot,QObject
 
 LOG = logging.getLogger('client')
 
 
-class Client(metaclass=ClientVerifier):
+class Client(QObject):
     port = CorrectPort()
-
+    message_arrived = pyqtSignal(str)
     def __init__(self):
+        QObject.__init__(self)
         try:
             # self.addr = sys.argv[1]
             self.addr = '127.0.0.1'
@@ -45,6 +47,7 @@ class Client(metaclass=ClientVerifier):
             LOG.error('Не введен ip адрес сервера')
 
         self.client_db = ClientStorage(self.akk_name)
+        self.client_socket = None
 
     @log
     def create_presence(self):
@@ -89,6 +92,8 @@ class Client(metaclass=ClientVerifier):
                         print(f'\nПолучено сообщение от {message[FROM]} - {message[MESSAGE]}')
                         self.client_db.add_message(message[FROM], message[MESSAGE], RECEIVED)
                         print('Введите команду: ')
+                        self.message_arrived.emit(message[FROM])
+
                 elif message.get(RESPONSE) == 201:
                     LOG.debug(f'Получено сообщение от сервера - {message[RESPONSE]}')
                     print(f'\nНовый контакт добавлен на сервере')
@@ -231,30 +236,37 @@ class Client(metaclass=ClientVerifier):
             else:
                 print('Команда не распознана')
 
-    def start_window(self,client_socket):
-        app = QtWidgets.QApplication(sys.argv)
-        window = MyWindow(self.client_db)
-        window.view_contacts()
+    # def start_window(self):
+    #     app = QtWidgets.QApplication(sys.argv)
+    #     self.window = MyWindow(self.client_db)
+    #     self.window.view_contacts()
+    #
+    #     self.window.make_connection(self.window.listContacts)
+    #     self.window.show()
+    #     self.window.sendButton.clicked.connect(
+    #         lambda: self.send_new_message(self.client_socket)
+    #     )
+    #     sys.exit(app.exec_())
 
-        window.make_connection(window.listContacts)
-        window.show()
-        window.sendButton.clicked.connect(
-            lambda: self.send_new_message(client_socket,window)
-        )
-        sys.exit(app.exec_())
-
-    def send_new_message(self,client_socket,window):
-        to_user = window.activ_contact_name
-        text = window.textSendEdit.toPlainText()
-        window.textSendEdit.clear()
+    def send_new_message(self, client_socket):
+        to_user = self.window.activ_contact_name
+        text = self.window.textSendEdit.toPlainText()
+        self.window.textSendEdit.clear()
         send_message(client_socket, self.create_message(text, to_user))
         self.client_db.add_message(to_user, text, SENT)
-        window.load_last_history(to_user)
+        self.window.load_last_history(to_user)
         time.sleep(0.5)
+
+    @pyqtSlot(str)
+    def new_message_allert(self,user_name):
+        if self.window.activ_contact_name == user_name:
+            self.window.load_last_history(user_name)
+
 
     def start(self):
         try:
             with socket(AF_INET, SOCK_STREAM) as client_socket:
+                self.client_socket = client_socket
                 client_socket.connect((self.addr, self.port))
                 LOG.info(f'Клиент подключился к серверу {self.addr} порт {self.port}')
                 send_message(client_socket, self.create_presence())
@@ -270,16 +282,24 @@ class Client(metaclass=ClientVerifier):
                     # user_interface.daemon = True
                     # user_interface.start()
 
-                    start_window = threading.Thread(target=self.start_window, args=(client_socket,))
-                    start_window.daemon = True
-                    start_window.start()
+                    app = QtWidgets.QApplication(sys.argv)
+                    self.window = MyWindow(self.client_db)
+                    self.window.view_contacts()
 
-                    while True:
-                        time.sleep(1)
-                        # if receiver.is_alive() and user_interface.is_alive() and start_window.is_alive():
-                        if receiver.is_alive() and start_window.is_alive():
-                            continue
-                        break
+                    self.window.make_connection(self.window.listContacts)
+                    self.window.show()
+                    self.window.sendButton.clicked.connect(
+                        lambda: self.send_new_message(self.client_socket)
+                    )
+                    self.message_arrived.connect(self.new_message_allert)
+                    sys.exit(app.exec_())
+
+                    # while True:
+                    #     time.sleep(1)
+                    #     # if receiver.is_alive() and user_interface.is_alive() and start_window.is_alive():
+                    #     if receiver.is_alive() and start_window.is_alive():
+                    #         continue
+                    #     break
         except gaierror:
             LOG.error('Неправильно введен Ip адрес')
         except ConnectionRefusedError as err:

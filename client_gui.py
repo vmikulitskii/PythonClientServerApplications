@@ -50,10 +50,14 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         last_messages = self.client_db.get_history(user_name)
         model = QStandardItemModel()
         self.tableMessage.setModel(model)
+        last_msg_status = ''
         for msg in last_messages:
             time = datetime.datetime.strftime(msg.date_time, '%H:%M')
             user_name = 'Я:' if msg.status == SENT else f'{msg.Contact.name}:'
-            parts = [user_name, time, msg.text]
+            if last_msg_status == msg.status:
+                parts = [time, msg.text]
+            else:
+                parts = [user_name, time, msg.text]
             for part in parts:
                 item = QStandardItem(part)
                 item.setEditable(False)
@@ -64,6 +68,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):
                     item.setTextAlignment(Qt.AlignLeft)
                     item.setBackground(QColor('#fceaca'))
                 model.appendRow([item])
+            last_msg_status = msg.status
 
         self.tableMessage.horizontalHeader().setDefaultSectionSize(490)
         self.tableMessage.resizeRowsToContents()
