@@ -1,8 +1,9 @@
 from sqlalchemy import MetaData, Table, Column, Integer, String, create_engine, ForeignKey, DateTime
-from sqlalchemy.orm import mapper, sessionmaker
+from sqlalchemy.orm import mapper, sessionmaker, relationship
 from sqlalchemy.ext.declarative import declarative_base
 import sqlite3
 from datetime import datetime
+from datetime import timedelta
 
 Base = declarative_base()
 
@@ -28,6 +29,8 @@ class ClientStorage():
         status = Column(String)
         date_time = Column(DateTime)
 
+        Contact = relationship('Contact', back_populates='Messages')
+
         def __init__(self, contact_id, text, status):
             self.id = None
             self.contact_id = contact_id
@@ -44,7 +47,10 @@ class ClientStorage():
         была возможность запускать несколько клиентов на одной машине
         :param akk_name:
         """
-        engine = create_engine(f'sqlite:///client_db_{akk_name}.db3')
+        self.akk_name = akk_name
+        self.Contact.Messages = relationship('Message', back_populates="Contact")
+
+        engine = create_engine(f'sqlite:///client_db_{self.akk_name}.db3?check_same_thread=False')
         Session = sessionmaker(bind=engine)
         Base.metadata.create_all(engine)
         self.session = Session()
@@ -86,11 +92,34 @@ class ClientStorage():
             self.add_contact(user_name)
             self.add_message(user_name, text, status)
 
+    def get_contacts(self):
+        users = self.session.query(self.Contact).all()
+        return users
+
+    def get_history(self, user_name, day=1):
+        """
+        возвращает список obj сообщений с юзером. По умолчанию за последние сутки.
+        :param day:
+        :param user_name: str
+        :return: list
+        """
+        user = self.session.query(self.Contact).filter_by(name=user_name).first()
+        if not day == 'all':
+            limit = datetime.now() - timedelta(days=day)
+            messages = self.session.query(self.Message).filter(self.Message.contact_id == user.id,
+                                                               self.Message.date_time > limit).order_by(
+                self.Message.date_time).all()
+        else:
+            messages = self.session.query(self.Message).all()
+        return messages
+
 
 def main():
-    client = ClientStorage('Vasya')
-    client.add_message('Vasya-lo', 'Привет go', 'sent')
-    client.add_message('Vasya-lo', 'Привет go', 'recieved')
+    client = ClientStorage('User-1')
+    client.add_message('User-7', 'Привет go', 'sent')
+    client.add_message('User-7', 'Привет сам', 'received')
+    print(client.get_contacts())
+    print(client.get_history('User-7'))
 
 
 if __name__ == '__main__':
