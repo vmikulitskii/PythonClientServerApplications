@@ -1,4 +1,8 @@
+import binascii
 import configparser
+import hashlib
+import hmac
+import os
 import select
 import time
 from pprint import pprint
@@ -12,13 +16,13 @@ import PyQt5.QtCore
 import log.server_log_config
 from common.decorators import log
 
-from common.utils import get_message, send_message
+from common.utils import get_message, send_message, cripto_pass
 from common.variables import *
 from common.variables import ADD_CONTACT, DEL_CONTACT, GET_CONTACTS
 from descriptors import CorrectPort
 from metaclasses import ClientVerifier, ServerVerifier
 from server_storage import ServerStorage
-from server_gui import MyWindow, UserHistory, ServerSettings
+from server_gui import MyWindow, UserHistory, ServerSettings, Registration
 import threading
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QMainWindow, QDialog
@@ -30,6 +34,7 @@ class Server(threading.Thread, metaclass=ServerVerifier):
     port = CorrectPort()
 
     def __init__(self):
+        self.app = QtWidgets.QApplication(sys.argv)
         threading.Thread.__init__(self)
         self.daemon = True
 
@@ -53,6 +58,9 @@ class Server(threading.Thread, metaclass=ServerVerifier):
         self.clients_dict = {}
 
         self.reload = False
+        self.authorized = False
+
+        self.reg_window = Registration()
 
     @log
     def create_answer(self, message):
@@ -98,9 +106,18 @@ class Server(threading.Thread, metaclass=ServerVerifier):
             except:
                 LOG.debug(f'Клиент{sock.fileno()} {sock.getpeername()} отключился')
                 all_clients.remove(sock)
-                self.server_db.delete_active_user(self.clients_dict[sock])
+                self.server_db.delete_active_user(self.clients_dict.get(sock))
                 self.reload = True
         return responses
+
+    def authorization(self, sock, passwrd):
+        message = os.urandom(32)
+        sock.send(message)
+
+        hash = hmac.new(passwrd, message, digestmod=hashlib.sha3_256)
+        digest = hash.digest()
+        response = sock.recv(len(digest))
+        return hmac.compare_digest(digest, response)
 
     def write_responses(self, requests, write_clients, all_clients):
         """
@@ -145,16 +162,44 @@ class Server(threading.Thread, metaclass=ServerVerifier):
                                     RESPONSE: 400,
                                     ERROR: 'Клиент с таким ником уже подключился к серверу'
                                 }
-                                sock.close
-                                all_clients.remove(sock)
+                                # sock.close
+                                # all_clients.remove(sock)
                                 send_message(sock, answer)
                                 return
                             else:
-                                self.clients_dict.update({sock: user_name})
-                                user_ip, user_port = sock.getpeername()
-                                self.server_db.user_login(user_name, user_ip, user_port)
-                                self.reload = True
-                            send_message(sock, self.create_answer(request))
+                                passwrd = self.server_db.get_user_pass(user_name)
+                                if passwrd:
+                                    answer = {
+                                        RESPONSE: 210,
+                                        ALLERT: f'Пользователь найден, давайте пройдем авторизацию'
+                                    }
+                                    send_message(sock,answer)
+                                    self.authorized = self.authorization(sock, passwrd)
+                                    if self.authorized:
+                                        self.clients_dict.update({sock: user_name})
+                                        user_ip, user_port = sock.getpeername()
+                                        self.server_db.user_login(user_name, user_ip, user_port)
+                                        self.reload = True
+                                        answer = {
+                                            RESPONSE: 200,
+                                            ALLERT: f'Добро пожаловать'
+                                        }
+                                    else:
+                                        answer = {
+                                            RESPONSE: 408,
+                                            ERROR: f'Неверный пароль'
+                                        }
+                                        send_message(sock, answer)
+                                        return
+                                else:
+                                    answer = {
+                                        RESPONSE: 407,
+                                        ERROR: f'Пользователь с ником {user_name} не зарегистрирован на сервере '
+                                    }
+                                    send_message(sock, answer)
+                                    return
+                            send_message(sock, answer)
+                            # send_message(sock, self.create_answer(request))
                     elif request.get(ACTION) == EXIT:
                         if key == sock:
                             all_clients.remove(sock)
@@ -165,14 +210,14 @@ class Server(threading.Thread, metaclass=ServerVerifier):
                             return
                     elif request.get(ACTION) == ADD_CONTACT:
                         if key == sock:
-                            result = self.server_db.add_new_contact(request[FROM],request[USER])
+                            result = self.server_db.add_new_contact(request[FROM], request[USER])
                             answer = {
                                 RESPONSE: result
                             }
                             send_message(sock, answer)
                     elif request.get(ACTION) == DEL_CONTACT:
                         if key == sock:
-                            result = self.server_db.delete_new_contact(request[FROM],request[USER])
+                            result = self.server_db.delete_new_contact(request[FROM], request[USER])
                             answer = {
                                 RESPONSE: result
                             }
@@ -182,7 +227,7 @@ class Server(threading.Thread, metaclass=ServerVerifier):
                             result = self.server_db.get_contacts(request[FROM])
                             answer = {
                                 RESPONSE: 202,
-                                ALLERT:result
+                                ALLERT: result
                             }
                             send_message(sock, answer)
             except Exception as E:
@@ -190,7 +235,7 @@ class Server(threading.Thread, metaclass=ServerVerifier):
                 print(E)
                 sock.close
                 all_clients.remove(sock)
-                self.server_db.delete_active_user(self.clients_dict[sock])
+                self.server_db.delete_active_user(self.clients_dict.get(sock))
                 self.reload = True
 
     def reload_active_users(self, window, history_window):
@@ -201,6 +246,29 @@ class Server(threading.Thread, metaclass=ServerVerifier):
             history_window.users_history_table.resizeColumnsToContents()
             print('Данные обновлены')
             self.reload = False
+
+    def add_new_user(self):
+        """
+        Проверяет логин на наличие пробелов, пароль на длинну и запускает функцию создания нового пользователя, если
+        возвращается False значит такой пользователь уже есть.
+        :return:
+        """
+        login = self.reg_window.loginEdit.text()
+        passwrd = self.reg_window.passEdit.text()
+        if " " in login:
+            self.reg_window.messageLabel.setText('В логине не должно быть пробелов')
+            return
+        if len(passwrd) < 8:
+            self.reg_window.messageLabel.setText('Пароль должен быть не менее 8 символов')
+            return
+
+        passwrd = cripto_pass(passwrd)
+        if self.server_db.create_user(name=login, passwrd=passwrd):
+            self.reg_window.messageLabel.setText(f'{login} добавлен на сервер')
+            self.reg_window.loginEdit.clear()
+            self.reg_window.passEdit.clear()
+        else:
+            self.reg_window.messageLabel.setText(f'{login} уже зарегистрирован на сервере')
 
     def run(self):
         serv_socket = socket(AF_INET, SOCK_STREAM)
@@ -236,7 +304,7 @@ class Server(threading.Thread, metaclass=ServerVerifier):
 def main():
     server = Server()
     server.start()
-    app = QtWidgets.QApplication(sys.argv)
+    # app = QtWidgets.QApplication(sys.argv)
     window = MyWindow()
     window.active_users_table.setModel(window.get_active_users_model(server.server_db))
     window.active_users_table.resizeColumnsToContents()
@@ -252,11 +320,15 @@ def main():
     setting_window = ServerSettings()
     window.server_settings.triggered.connect(setting_window.show)
 
+    window.reg_new_user.triggered.connect(server.reg_window.show)
+
+    server.reg_window.addButton.clicked.connect(server.add_new_user)
+
     timer = PyQt5.QtCore.QTimer()
     timer.timeout.connect(lambda: server.reload_active_users(window, history_window))
     timer.start(1000)
 
-    sys.exit(app.exec_())
+    sys.exit(server.app.exec_())
 
 
 if __name__ == "__main__":

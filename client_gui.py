@@ -10,6 +10,7 @@ from client_storage import ClientStorage
 from client_gui_main_ui import Ui_MainWindow
 from client_gui_arrived_message_ui import Ui_newMesaageDialog
 from client_gui_new_localcontact_ui import Ui_addNewLocalContactDialog
+from client_gui_log_pass_ui import Ui_loginPasswrdDialog
 from common.variables import SENT, RECEIVED
 
 
@@ -102,6 +103,19 @@ class NewLocalContact(QDialog, Ui_addNewLocalContactDialog):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
+
+
+class LoginPass(QDialog, Ui_loginPasswrdDialog):
+
+    def __init__(self):
+        super().__init__()
+        self.setupUi(self)
+
+        self.passEdit.setEchoMode(QtWidgets.QLineEdit.EchoMode.Password)
+
+    def edit_clear(self):
+        self.loginEdit.clear()
+        self.passEdit.clear()
 
 
 def main():

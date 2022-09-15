@@ -1,3 +1,5 @@
+import hashlib
+import hmac
 import json
 import time
 from socket import socket, AF_INET, SOCK_STREAM, gaierror
@@ -8,16 +10,16 @@ import logging
 import PyQt5.QtWidgets
 
 import log.client_log_config
-from common.decorators import log
+from common.decorators import log, login_required
 import threading
 
 from common.variables import *
-from common.utils import get_message, send_message
+from common.utils import get_message, send_message, cripto_pass
 from common.variables import ADD_CONTACT, DEL_CONTACT, GET_CONTACTS, RECEIVED, SENT
 from descriptors import CorrectPort
 from metaclasses import ClientVerifier, ServerVerifier
 from client_storage import ClientStorage
-from client_gui import MyWindow, ArrivedMessage, NewLocalContact
+from client_gui import MyWindow, ArrivedMessage, NewLocalContact, LoginPass
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QObject
 
@@ -50,12 +52,15 @@ class Client(QObject):
         except IndexError:
             LOG.error('Не введен ip адрес сервера')
 
-        self.client_db = ClientStorage(self.akk_name)
+        self.client_db = None
         self.app = QtWidgets.QApplication(sys.argv)
-        self.window = MyWindow(self.client_db)
+        self.window = None
         self.dialog = ArrivedMessage()
         self.new_local_contact = NewLocalContact()
+        self.login_pass = LoginPass()
         self.client_socket = None
+        self.passwrd = ''
+        self.authorized = False
 
     @log
     def create_presence(self):
@@ -284,46 +289,80 @@ class Client(QObject):
         self.window.listContacts.clear()
         self.window.view_contacts()
 
+    def authorization(self):
+        """
+        Получаем логин и пароль из полей окна, хешируем пароль
+        Отправляем presence. Если получаем в ответ 407 то значит такой пользователь
+        не зарегистрирован на сервере. Если получаем 210 то получаем message хешируем его
+        с помошью нашего пароля и отправляем на вервер. Если получаем 200 значит всё ок.
+        ставим флаг что мы авторизованы и закрываем окно. Если получаем 408 то выводим
+        сообщение что пароль не верен.
 
+        :return:
+        """
+
+        self.akk_name = self.login_pass.loginEdit.text()
+        passwrd = cripto_pass(self.login_pass.passEdit.text())
+        send_message(self.client_socket, self.create_presence())
+        answer = get_message(self.client_socket)
+        if answer[RESPONSE] == 407:
+            self.login_pass.messageLabel.setText(answer[ERROR])
+            self.login_pass.edit_clear()
+        elif answer[RESPONSE] == 400:
+            self.login_pass.messageLabel.setText(answer[ERROR])
+            self.login_pass.edit_clear()
+        elif answer[RESPONSE] == 210:
+            message = self.client_socket.recv(32)
+            hash = hmac.new(passwrd, message, digestmod=hashlib.sha3_256)
+            digest = hash.digest()
+            self.client_socket.send(digest)
+            answer = get_message(self.client_socket)
+            if answer[RESPONSE] == 200:
+                print(answer[ALLERT])
+                self.authorized = True
+                self.login_pass.close()
+            elif answer[RESPONSE] == 408:
+                self.login_pass.messageLabel.setText(answer[ERROR])
+                self.login_pass.passEdit.clear()
+
+    def login(self):
+        """
+        Запускаем окно Логин-Пароль. Подключаемся к серверу. Ждем ввода логина, пароля и нажания кнопки.
+
+        Позже надо сделать тут проверки на допустимый логин и пароль
+        :return:
+        """
+        self.login_pass.show()
+        client_socket = socket(AF_INET, SOCK_STREAM)
+        client_socket.connect((self.addr, self.port))
+        self.client_socket = client_socket
+        LOG.info(f'Клиент подключился к серверу {self.addr} порт {self.port}')
+        print(f'Клиент подключился к серверу {self.addr} порт {self.port}')
+        self.login_pass.enterButton.clicked.connect(self.authorization)
+        self.app.exec_()
+
+    @login_required
     def start(self):
         try:
-            with socket(AF_INET, SOCK_STREAM) as client_socket:
-                self.client_socket = client_socket
-                client_socket.connect((self.addr, self.port))
-                LOG.info(f'Клиент подключился к серверу {self.addr} порт {self.port}')
-                send_message(client_socket, self.create_presence())
-                response = self.parse_response(get_message(client_socket))
-                print(response[1])
-                print('----------------------------------------------------')
-                if response[0] == 200:
-                    receiver = threading.Thread(target=self.message_from_server, args=(client_socket,))
-                    receiver.daemon = True
-                    receiver.start()
+            print('start')
+            self.client_db = ClientStorage(self.akk_name)
+            self.window = MyWindow(self.client_db)
 
-                    # user_interface = threading.Thread(target=self.user_interactive, args=(client_socket,))
-                    # user_interface.daemon = True
-                    # user_interface.start()
+            receiver = threading.Thread(target=self.message_from_server, args=(self.client_socket,))
+            receiver.daemon = True
+            receiver.start()
 
-                    # app = QtWidgets.QApplication(sys.argv)
+            self.window.view_contacts()
+            self.window.make_connection(self.window.listContacts)
+            self.window.show()
+            self.window.sendButton.clicked.connect(
+                lambda: self.send_new_message(self.client_socket)
+            )
+            self.window.actionNewContact.triggered.connect(self.new_local_contact.show)
+            self.message_arrived.connect(self.new_message_allert)
+            self.new_local_contact.buttonBox.accepted.connect(self.add_new_local_contact)
 
-                    self.window.view_contacts()
-                    self.window.make_connection(self.window.listContacts)
-                    self.window.show()
-                    self.window.sendButton.clicked.connect(
-                        lambda: self.send_new_message(self.client_socket)
-                    )
-                    self.window.actionNewContact.triggered.connect(self.new_local_contact.show)
-                    self.message_arrived.connect(self.new_message_allert)
-                    self.new_local_contact.buttonBox.accepted.connect(self.add_new_local_contact)
-
-                    sys.exit(self.app.exec_())
-
-                    # while True:
-                    #     time.sleep(1)
-                    #     # if receiver.is_alive() and user_interface.is_alive() and start_window.is_alive():
-                    #     if receiver.is_alive():
-                    #         continue
-                    #     break
+            sys.exit(self.app.exec_())
         except gaierror:
             LOG.error('Неправильно введен Ip адрес')
         except ConnectionRefusedError as err:
@@ -333,7 +372,7 @@ class Client(QObject):
 @log
 def main():
     client = Client()
-    # client.start_window()
+    client.login()
     client.start()
 
 

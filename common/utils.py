@@ -1,3 +1,5 @@
+import binascii
+import hashlib
 import json, sys
 
 from common.decorators import log
@@ -36,3 +38,11 @@ def send_message(sock, message):
         sock.send(json_message)
     else:
         return ValueError
+
+
+def cripto_pass(passwrd):
+    passwrd = passwrd.encode(encoding='utf-8')
+    dk = hashlib.pbkdf2_hmac('sha256', passwrd, b'salt for the dishwasher 303', 100000)
+    new_pass = binascii.hexlify(dk)
+    print(new_pass)
+    return new_pass
