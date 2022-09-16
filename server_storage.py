@@ -50,6 +50,15 @@ class ServerStorage:
         def __repr__(self):
             return f'{self.user_1_id} - {self.user_2_id}'
 
+    class UserKey:
+        def __init__(self, user_id, public_key):
+            self.user_id = user_id
+            self.public_key = public_key
+            self.id = None
+
+        def __repr__(self):
+            return f'User - {self.user_id}'
+
     def __init__(self):
         # engine = create_engine('sqlite:///server_db.db3?check_same_thread=False', echo=False)
         config = configparser.ConfigParser()
@@ -88,11 +97,18 @@ class ServerStorage:
                          Column('user_2_id', Integer, ForeignKey('all_users.id'))
                          )
 
+        keys = Table('keys', self.meta_data,
+                         Column('id', Integer, primary_key=True),
+                         Column('user_id', Integer, ForeignKey('all_users.id')),
+                         Column('public_key', String)
+                         )
+
         self.meta_data.create_all(engine)
         mapper(self.AllUser, clients_table)
         mapper(self.ActiveUser, active_users)
         mapper(self.LoginHistory, login_history)
         mapper(self.Contact, contacts)
+        mapper(self.UserKey, keys)
         self.clear_active_users()
 
     def create_user(self, name,passwrd):
@@ -210,21 +226,32 @@ class ServerStorage:
         result = [contact[1].name for contact in user_contacts]
         return result
 
+    def set_key(self,user_name,public_key):
+        user = self.session.query(self.AllUser).filter_by(name=user_name).first()
+        key = self.session.query(self.UserKey).filter_by(user_id = user.id).first()
+        if key:
+            if key.public_key != public_key:
+                key.public_key = public_key
+        else:
+            key = self.UserKey(user.id,public_key)
+        self.session.add(key)
+        self.session.commit()
 
 if __name__ == '__main__':
     server = ServerStorage()
-    new_user = server.create_user('Vovas','Paasword')
-    server.add_new_active_user(new_user.id, '127.0.0.1', '7777')
-    new_user_2 = server.create_user('Dima','Passwrd2')
-    server.add_new_active_user(new_user_2.id, '127.0.0.1', '7777')
-
-    # server.user_login('Vanya', '127.0.0.1', '8888')
-    full_data = server.session.query(server.AllUser.name, server.ActiveUser.ip, server.AllUser.last_login_date).join(
-        server.AllUser).all()
-    # print(full_data)
-    # server.user_login('Petya', '127.0.0.1', '8888')
-    print('-------------')
-    print(server.get_active_users(name='Vovas'))
+    server.set_key('User-1','123')
+    # new_user = server.create_user('Vovas','Paasword')
+    # server.add_new_active_user(new_user.id, '127.0.0.1', '7777')
+    # new_user_2 = server.create_user('Dima','Passwrd2')
+    # server.add_new_active_user(new_user_2.id, '127.0.0.1', '7777')
+    #
+    # # server.user_login('Vanya', '127.0.0.1', '8888')
+    # full_data = server.session.query(server.AllUser.name, server.ActiveUser.ip, server.AllUser.last_login_date).join(
+    #     server.AllUser).all()
+    # # print(full_data)
+    # # server.user_login('Petya', '127.0.0.1', '8888')
+    # print('-------------')
+    # print(server.get_active_users(name='Vovas'))
     # server.delete_active_user('Vovas')
     #
     # query = server.session.query(server.AllUser, server.ActiveUser).outerjoin(server.ActiveUser)

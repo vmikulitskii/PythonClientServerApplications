@@ -230,6 +230,15 @@ class Server(threading.Thread, metaclass=ServerVerifier):
                                 ALLERT: result
                             }
                             send_message(sock, answer)
+                    elif request.get(ACTION) == PUBLIC_KEY:
+                        if key == sock:
+                            self.server_db.set_key(request[USER][ACCOUNT_NAME],request[KEY])
+                        answer = {
+                            RESPONSE: 203,
+                            ALLERT: 'Ключ добавлен'
+                        }
+                        send_message(sock, answer)
+
             except Exception as E:
                 LOG.debug(f'Клиент{sock.fileno()} {sock.getpeername()} отключился')
                 print(E)

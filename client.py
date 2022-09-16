@@ -23,6 +23,8 @@ from client_gui import MyWindow, ArrivedMessage, NewLocalContact, LoginPass
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QObject
 
+from Crypto.PublicKey import RSA
+
 LOG = logging.getLogger('client')
 
 
@@ -283,6 +285,8 @@ class Client(QObject):
         self.window.load_last_history(user_name)
         self.window.activ_contact_name = user_name
 
+
+
     def add_new_local_contact(self):
         user_name = self.new_local_contact.userNameEdit.text()
         self.client_db.add_contact(user_name)
@@ -320,6 +324,7 @@ class Client(QObject):
             if answer[RESPONSE] == 200:
                 print(answer[ALLERT])
                 self.authorized = True
+                self.client_db = ClientStorage(self.akk_name)
                 self.login_pass.close()
             elif answer[RESPONSE] == 408:
                 self.login_pass.messageLabel.setText(answer[ERROR])
@@ -341,11 +346,27 @@ class Client(QObject):
         self.login_pass.enterButton.clicked.connect(self.authorization)
         self.app.exec_()
 
+    def send_public_key(self):
+        msg = {
+            ACTION:PUBLIC_KEY,
+            TIME: datetime.datetime.now().timestamp(),
+            USER: {
+                ACCOUNT_NAME: self.akk_name,
+            },
+            KEY: self.public_key.decode()
+        }
+        send_message(self.client_socket, msg)
+        answer = get_message(self.client_socket)
+        if answer[RESPONSE] == 203:
+            print(answer[ALLERT])
+        else:
+            print('Что то пошло не так')
+
     @login_required
     def start(self):
         try:
             print('start')
-            self.client_db = ClientStorage(self.akk_name)
+
             self.window = MyWindow(self.client_db)
 
             receiver = threading.Thread(target=self.message_from_server, args=(self.client_socket,))
@@ -369,10 +390,27 @@ class Client(QObject):
             LOG.error(err)
 
 
-@log
+def generate_key():
+    key = RSA.generate(2048)
+    private_key = key.export_key()
+    public_key = key.publickey().export_key()
+
+    return private_key, public_key
+
+
+
 def main():
     client = Client()
     client.login()
+    keys = client.client_db.get_keys()
+    if keys:
+        client.private_key = keys.private_key
+        client.public_key = keys.public_key
+    else:
+        client.private_key, client.public_key = generate_key()
+        client.client_db.add_keys(client.private_key, client.public_key)
+    client.send_public_key()
+
     client.start()
 
 

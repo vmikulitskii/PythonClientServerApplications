@@ -21,6 +21,19 @@ class ClientStorage():
         def __repr__(self):
             return f'{self.id} - {self.name}'
 
+    class MyKey(Base):
+        __tablename__ = 'Keys'
+        id = Column(Integer, primary_key=True)
+        private_key = Column(String)
+        public_key = Column(String)
+
+        def __init__(self, private_key,public_key):
+            self.private_key = private_key
+            self.public_key = public_key
+
+        def __repr__(self):
+            return f'{self.private_key} - {self.public_key}'
+
     class Message(Base):
         __tablename__ = 'Messages'
         id = Column(Integer, primary_key=True)
@@ -112,6 +125,28 @@ class ClientStorage():
         else:
             messages = self.session.query(self.Message).all()
         return messages
+
+    def get_keys(self):
+        '''
+        Запрашивае ключи, если их нет то возвразаем False
+        :return:
+        '''
+        keys = self.session.query(self.MyKey).first()
+        if keys:
+            return keys
+        else:
+            return False
+
+    def add_keys(self,private_key,public_key):
+        """
+        Добавляем ключи
+        :param private_key:
+        :param public_key:
+        :return:
+        """
+        keys = self.MyKey(private_key,public_key)
+        self.session.add(keys)
+        self.session.commit()
 
 
 def main():

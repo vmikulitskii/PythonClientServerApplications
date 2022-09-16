@@ -32,8 +32,11 @@ PRESENCE = 'presence'
 RESPONSE = 'response'
 ERROR = 'error'
 
-SENT ='sent'
-RECEIVED ='received'
+SENT = 'sent'
+RECEIVED = 'received'
+
+PUBLIC_KEY = 'public_key'
+KEY = 'key'
 
 # Имя пользователя по умолчанию
 DEFAULT_USER = 'Guest'
@@ -41,4 +44,4 @@ DEFAULT_USER = 'Guest'
 __all__ = ('DEFAULT_PORT', 'DEFAULT_IP_ADDRESS', 'MAX_CONNECTIONS',
            'MAX_PACKAGE_LENGTH', 'ENCODING', 'ACTION', 'TIME', 'USER', 'ACCOUNT_NAME',
            'ALLERT', 'STATUS', 'TYPE', 'PRESENCE', 'RESPONSE', 'ERROR',
-           'DEFAULT_USER','MSG','TO','FROM','MESSAGE','EXIT')
+           'DEFAULT_USER', 'MSG', 'TO', 'FROM', 'MESSAGE', 'EXIT','PUBLIC_KEY','KEY')
