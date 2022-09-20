@@ -1,20 +1,21 @@
+""" Gui для серверной части мессенджера"""
+import configparser
 import pathlib
 import sys
 from collections import namedtuple
+from datetime import datetime
+from os import path
 
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QMainWindow, QDialog
-from server_gui_main_ui import Ui_MainWindow
-from sevrer_gui_history_ui import Ui_Dialog as History_Ui_Dialog
-from server_gui_settings_ui import Ui_Dialog as ServerSettings_Ui_Dialog
-from server_gui_registration_ui import Ui_regNewUserDialog
-from PyQt5.QtGui import QStandardItemModel, QStandardItem
-from server_storage import ServerStorage
-from datetime import datetime
 from PyQt5.QtCore import Qt
-from os import path
-import pathlib
-import configparser
+from PyQt5.QtGui import QStandardItem, QStandardItemModel
+from PyQt5.QtWidgets import QDialog, QMainWindow
+
+from server_gui_main_ui import Ui_MainWindow
+from server_gui_registration_ui import Ui_regNewUserDialog
+from server_gui_settings_ui import Ui_Dialog as ServerSettings_Ui_Dialog
+from server_storage import ServerStorage
+from sevrer_gui_history_ui import Ui_Dialog as History_Ui_Dialog
 
 
 class MyWindow(QMainWindow, Ui_MainWindow):

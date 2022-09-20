@@ -1,0 +1,299 @@
+
+<!DOCTYPE html>
+
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>client module &#8212; документация OrangeMessenger 1.0</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/translations.js"></script>
+    <link rel="index" title="Алфавитный указатель" href="genindex.html" />
+    <link rel="search" title="Поиск" href="search.html" />
+    <link rel="next" title="client_gui module" href="client_gui.html" />
+    <link rel="prev" title="PythonClientServerApplications" href="modules.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-client">
+<span id="client-module"></span><h1>client module<a class="headerlink" href="#module-client" title="Permalink to this heading">¶</a></h1>
+<p>Модуль клиента мессенджера</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="client.Client">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">client.</span></span><span class="sig-name descname"><span class="pre">Client</span></span><a class="headerlink" href="#client.Client" title="Ссылка на это определение">¶</a></dt>
+<dd><p>Базовые классы: <code class="xref py py-class docutils literal notranslate"><span class="pre">QObject</span></code></p>
+<p>Основной класс клиентской части приложения</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="client.Client.add_contact">
+<span class="sig-name descname"><span class="pre">add_contact</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">new_contact</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#client.Client.add_contact" title="Ссылка на это определение">¶</a></dt>
+<dd><p>Создает запрос серверу на добавление нового контакта
+:param new_contact: str
+:return: str</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="client.Client.add_new_local_contact">
+<span class="sig-name descname"><span class="pre">add_new_local_contact</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#client.Client.add_new_local_contact" title="Ссылка на это определение">¶</a></dt>
+<dd><p>Добавляет новый контакт в локальную базу</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="client.Client.authorization">
+<span class="sig-name descname"><span class="pre">authorization</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#client.Client.authorization" title="Ссылка на это определение">¶</a></dt>
+<dd><p>Получаем логин и пароль из полей окна, хешируем пароль
+Отправляем presence. Если получаем в ответ 407 то значит такой пользователь
+не зарегистрирован на сервере. Если получаем 210 то получаем message хешируем его
+с помошью нашего пароля и отправляем на вервер. Если получаем 200 значит всё ок.
+ставим флаг что мы авторизованы и закрываем окно. Если получаем 408 то выводим
+сообщение что пароль не верен.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Результат<span class="colon">:</span></dt>
+<dd class="field-odd"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="client.Client.create_exit_message">
+<span class="sig-name descname"><span class="pre">create_exit_message</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#client.Client.create_exit_message" title="Ссылка на это определение">¶</a></dt>
+<dd><p>Создает сообщение о выходе клиента из месседжера</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="client.Client.create_message">
+<span class="sig-name descname"><span class="pre">create_message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">to</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#client.Client.create_message" title="Ссылка на это определение">¶</a></dt>
+<dd><p>Получает текст имя отправителя и получателя и генерирует message
+:param text: str
+:param akk_name: str
+:param to: str
+:return: dict</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="client.Client.create_presence">
+<span class="sig-name descname"><span class="pre">create_presence</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#client.Client.create_presence" title="Ссылка на это определение">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="client.Client.del_contact">
+<span class="sig-name descname"><span class="pre">del_contact</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">contact</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#client.Client.del_contact" title="Ссылка на это определение">¶</a></dt>
+<dd><p>Создает запрос серверу на удаление ко контакта
+:param new_contact: str
+:return: str</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="client.Client.get_contacts">
+<span class="sig-name descname"><span class="pre">get_contacts</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#client.Client.get_contacts" title="Ссылка на это определение">¶</a></dt>
+<dd><p>Создает запрос серверу на на получение списка контактов
+:return:</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="client.Client.login">
+<span class="sig-name descname"><span class="pre">login</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#client.Client.login" title="Ссылка на это определение">¶</a></dt>
+<dd><p>Запускаем окно Логин-Пароль. Подключаемся к серверу. Ждем ввода логина, пароля и нажания кнопки.</p>
+<p>Позже надо сделать тут проверки на допустимый логин и пароль
+:return:</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="client.Client.message_arrived">
+<span class="sig-name descname"><span class="pre">message_arrived</span></span><a class="headerlink" href="#client.Client.message_arrived" title="Ссылка на это определение">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="client.Client.message_from_server">
+<span class="sig-name descname"><span class="pre">message_from_server</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">client_sock</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#client.Client.message_from_server" title="Ссылка на это определение">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="client.Client.new_message_allert">
+<span class="sig-name descname"><span class="pre">new_message_allert</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">user_name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#client.Client.new_message_allert" title="Ссылка на это определение">¶</a></dt>
+<dd><p>Срабатывает при получении нового сообщения. Проверяет, открыт ли чат с этим
+пользователем. Если да, то просто подгружает сообщения. Если нет то выдает
+окно с предложением перейти в чат с этим контактом.
+:param user_name: str
+:return:</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="client.Client.parse_response">
+<span class="sig-name descname"><span class="pre">parse_response</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#client.Client.parse_response" title="Ссылка на это определение">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="client.Client.port">
+<span class="sig-name descname"><span class="pre">port</span></span><a class="headerlink" href="#client.Client.port" title="Ссылка на это определение">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="client.Client.print_help">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">print_help</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#client.Client.print_help" title="Ссылка на это определение">¶</a></dt>
+<dd><p>Функция выводящяя справку по использованию</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="client.Client.select_chat">
+<span class="sig-name descname"><span class="pre">select_chat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">user_name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#client.Client.select_chat" title="Ссылка на это определение">¶</a></dt>
+<dd><p>Загружает сообщения с пользователем, и делает его активным
+что бы дальнейшие сообщения отправлялись ему
+:param user_name: str
+:return:</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="client.Client.send_new_message">
+<span class="sig-name descname"><span class="pre">send_new_message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">client_socket</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#client.Client.send_new_message" title="Ссылка на это определение">¶</a></dt>
+<dd><p>получает сокет, берет текст из поля отправки и отправляет его
+добавляет сообщене в локальную базу и загружает в окно сообщений
+:param client_socket:
+:return:</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="client.Client.send_public_key">
+<span class="sig-name descname"><span class="pre">send_public_key</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#client.Client.send_public_key" title="Ссылка на это определение">¶</a></dt>
+<dd><p>Функция отправки публичного ключа на сервер.
+:return:</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="client.Client.start">
+<span class="sig-name descname"><span class="pre">start</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#client.Client.start" title="Ссылка на это определение">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="client.generate_key">
+<span class="sig-prename descclassname"><span class="pre">client.</span></span><span class="sig-name descname"><span class="pre">generate_key</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#client.generate_key" title="Ссылка на это определение">¶</a></dt>
+<dd><p>Генерация ключей для сквозного шифрования
+:return:</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="client.main">
+<span class="sig-prename descclassname"><span class="pre">client.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#client.main" title="Ссылка на это определение">¶</a></dt>
+<dd><p>Создает обьект клиента, запускает функцию авторизации. Проверяет сгенерированы ли ключи
+если нет то генерирует, отправляет публичный ключ на сервер</p>
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">OrangeMessenger</a></h1>
+
+
+
+
+
+
+
+
+<h3>Навигация</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">PythonClientServerApplications</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">client module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="client_gui.html">client_gui module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="client_gui_arrived_message_ui.html">client_gui_arrived_message_ui module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="client_gui_log_pass_ui.html">client_gui_log_pass_ui module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="client_gui_main_ui.html">client_gui_main_ui module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="client_gui_new_localcontact_ui.html">client_gui_new_localcontact_ui module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="client_recv.html">client_recv module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="client_send.html">client_send module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="client_storage.html">client_storage module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="common.html">common package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="descriptors.html">descriptors module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="log.html">log package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="metaclasses.html">metaclasses module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="server.html">server module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="server_gui.html">server_gui module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="server_gui_main_ui.html">server_gui_main_ui module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="server_gui_registration_ui.html">server_gui_registration_ui module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="server_gui_settings_ui.html">server_gui_settings_ui module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="server_storage.html">server_storage module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sevrer_gui_history_ui.html">sevrer_gui_history_ui module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="start.html">start module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tests.html">tests package</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">PythonClientServerApplications</a><ul>
+      <li>Previous: <a href="modules.html" title="предыдущая глава">PythonClientServerApplications</a></li>
+      <li>Next: <a href="client_gui.html" title="следующая глава">client_gui module</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Быстрый поиск</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Искать" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2022, Vladimir Mikulitskii.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.1.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/client.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
