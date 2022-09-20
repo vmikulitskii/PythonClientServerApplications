@@ -7,6 +7,7 @@ from PyQt5.QtWidgets import QMainWindow, QDialog
 from server_gui_main_ui import Ui_MainWindow
 from sevrer_gui_history_ui import Ui_Dialog as History_Ui_Dialog
 from server_gui_settings_ui import Ui_Dialog as ServerSettings_Ui_Dialog
+from server_gui_registration_ui import Ui_regNewUserDialog
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
 from server_storage import ServerStorage
 from datetime import datetime
@@ -159,6 +160,14 @@ class ServerSettings(QDialog, ServerSettings_Ui_Dialog):
 
         self.SaveButton.clicked.connect(self.set_settings)
         self.pushDbPathButton.clicked.connect(self.browse_folser)
+
+class Registration(QDialog, Ui_regNewUserDialog):
+
+    def __init__(self):
+        super().__init__()
+        self.setupUi(self)
+
+        self.passEdit.setEchoMode(QtWidgets.QLineEdit.EchoMode.Password)
 
 
 if __name__ == '__main__':
