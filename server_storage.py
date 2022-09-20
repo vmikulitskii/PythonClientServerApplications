@@ -1,11 +1,12 @@
 import configparser
 import os.path
-
-from sqlalchemy import MetaData, Table, Column, Integer, String, create_engine, ForeignKey, DateTime
-from sqlalchemy.orm import mapper, sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
 import sqlite3
 from datetime import datetime
+
+from sqlalchemy import (Column, DateTime, ForeignKey, Integer, MetaData,
+                        String, Table, create_engine)
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import mapper, sessionmaker
 
 
 class ServerStorage:

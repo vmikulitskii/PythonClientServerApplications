@@ -1,31 +1,28 @@
-import binascii
+""" Модуль серверной части месседжера"""
 import configparser
+import datetime
 import hashlib
 import hmac
+import logging
 import os
 import select
-import time
-from pprint import pprint
-from socket import socket, AF_INET, SOCK_STREAM
-import datetime
 import sys
-import logging
+import threading
+from socket import AF_INET, SOCK_STREAM, socket
 
 import PyQt5.QtCore
+from PyQt5 import QtWidgets
+
 
 import log.server_log_config
 from common.decorators import log
-
-from common.utils import get_message, send_message, cripto_pass
+from common.utils import cripto_pass, get_message, send_message
 from common.variables import *
 from common.variables import ADD_CONTACT, DEL_CONTACT, GET_CONTACTS
 from descriptors import CorrectPort
-from metaclasses import ClientVerifier, ServerVerifier
+from metaclasses import  ServerVerifier
+from server_gui import MyWindow, Registration, ServerSettings, UserHistory
 from server_storage import ServerStorage
-from server_gui import MyWindow, UserHistory, ServerSettings, Registration
-import threading
-from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QMainWindow, QDialog
 
 LOG = logging.getLogger('server')
 
@@ -64,7 +61,6 @@ class Server(threading.Thread, metaclass=ServerVerifier):
 
     @log
     def create_answer(self, message):
-
         """
         Функция принимает сообщение в виде словаря, проверяет его и генерирует ответ
         :param message: dict
@@ -79,7 +75,7 @@ class Server(threading.Thread, metaclass=ServerVerifier):
                 ALLERT: f'Приветствую вас - {user_name}'
             }
         elif ACTION in message and message[
-            ACTION] == MSG and TIME in message and FROM in message and TO in message:
+                ACTION] == MSG and TIME in message and FROM in message and TO in message:
             answer = message
         else:
             answer = {
@@ -103,19 +99,29 @@ class Server(threading.Thread, metaclass=ServerVerifier):
             try:
                 data = get_message(sock)
                 responses[sock] = data
-            except:
-                LOG.debug(f'Клиент{sock.fileno()} {sock.getpeername()} отключился')
+            except BaseException:
+                LOG.debug(
+                    f'Клиент{sock.fileno()} {sock.getpeername()} отключился')
                 all_clients.remove(sock)
                 self.server_db.delete_active_user(self.clients_dict.get(sock))
                 self.reload = True
         return responses
 
-    def authorization(self, sock, passwrd):
+    @staticmethod
+    def authorization(sock, passwrd):
+        """
+        Получаемт сокет и пароль, генерирует случайный набор байтов, отправляет его клиенту,
+         хэширует его с помошью пароля, и ждет от клиента его версию, сравнивает их.
+         Если данные совпали то возвращает True
+        :param sock:
+        :param passwrd:
+        :return:
+        """
         message = os.urandom(32)
         sock.send(message)
 
-        hash = hmac.new(passwrd, message, digestmod=hashlib.sha3_256)
-        digest = hash.digest()
+        hash_ = hmac.new(passwrd, message, digestmod=hashlib.sha3_256)
+        digest = hash_.digest()
         response = sock.recv(len(digest))
         return hmac.compare_digest(digest, response)
 
@@ -138,7 +144,8 @@ class Server(threading.Thread, metaclass=ServerVerifier):
                     if request.get(ACTION) == MSG:
                         recipient = request.get(TO)
                         sender = request.get(FROM)
-                        if recipient and (self.clients_dict.get(sock) == recipient or recipient == '#'):
+                        if recipient and (self.clients_dict.get(
+                                sock) == recipient or recipient == '#'):
                             send_message(sock, self.create_answer(request))
 
                         elif sender and self.clients_dict.get(sock) == sender:
@@ -150,8 +157,7 @@ class Server(threading.Thread, metaclass=ServerVerifier):
                             else:
                                 answer = {
                                     RESPONSE: 405,
-                                    ERROR: 'Сообщение не отправлено. Клиент с таким ником не подключен к серверу'
-                                }
+                                    ERROR: 'Сообщение не отправлено. Клиент с таким ником не подключен к серверу'}
                             send_message(sock, answer)
 
                     elif request.get(ACTION) == PRESENCE:
@@ -159,26 +165,26 @@ class Server(threading.Thread, metaclass=ServerVerifier):
                             user_name = request[USER][ACCOUNT_NAME]
                             if self.server_db.get_active_users(user_name):
                                 answer = {
-                                    RESPONSE: 400,
-                                    ERROR: 'Клиент с таким ником уже подключился к серверу'
-                                }
+                                    RESPONSE: 400, ERROR: 'Клиент с таким ником уже подключился к серверу'}
                                 # sock.close
                                 # all_clients.remove(sock)
                                 send_message(sock, answer)
                                 return
                             else:
-                                passwrd = self.server_db.get_user_pass(user_name)
+                                passwrd = self.server_db.get_user_pass(
+                                    user_name)
                                 if passwrd:
                                     answer = {
-                                        RESPONSE: 210,
-                                        ALLERT: f'Пользователь найден, давайте пройдем авторизацию'
-                                    }
-                                    send_message(sock,answer)
-                                    self.authorized = self.authorization(sock, passwrd)
+                                        RESPONSE: 210, ALLERT: f'Пользователь найден, давайте пройдем авторизацию'}
+                                    send_message(sock, answer)
+                                    self.authorized = self.authorization(
+                                        sock, passwrd)
                                     if self.authorized:
-                                        self.clients_dict.update({sock: user_name})
+                                        self.clients_dict.update(
+                                            {sock: user_name})
                                         user_ip, user_port = sock.getpeername()
-                                        self.server_db.user_login(user_name, user_ip, user_port)
+                                        self.server_db.user_login(
+                                            user_name, user_ip, user_port)
                                         self.reload = True
                                         answer = {
                                             RESPONSE: 200,
@@ -194,8 +200,7 @@ class Server(threading.Thread, metaclass=ServerVerifier):
                                 else:
                                     answer = {
                                         RESPONSE: 407,
-                                        ERROR: f'Пользователь с ником {user_name} не зарегистрирован на сервере '
-                                    }
+                                        ERROR: f'Пользователь с ником {user_name} не зарегистрирован на сервере '}
                                     send_message(sock, answer)
                                     return
                             send_message(sock, answer)
@@ -205,19 +210,22 @@ class Server(threading.Thread, metaclass=ServerVerifier):
                             all_clients.remove(sock)
                             sock.close
                             self.server_db.delete_active_user(request[FROM])
-                            LOG.debug(f'Клиент{sock.fileno()} {sock.getpeername()} отключился')
+                            LOG.debug(
+                                f'Клиент{sock.fileno()} {sock.getpeername()} отключился')
                             self.reload = True
                             return
                     elif request.get(ACTION) == ADD_CONTACT:
                         if key == sock:
-                            result = self.server_db.add_new_contact(request[FROM], request[USER])
+                            result = self.server_db.add_new_contact(
+                                request[FROM], request[USER])
                             answer = {
                                 RESPONSE: result
                             }
                             send_message(sock, answer)
                     elif request.get(ACTION) == DEL_CONTACT:
                         if key == sock:
-                            result = self.server_db.delete_new_contact(request[FROM], request[USER])
+                            result = self.server_db.delete_new_contact(
+                                request[FROM], request[USER])
                             answer = {
                                 RESPONSE: result
                             }
@@ -232,7 +240,8 @@ class Server(threading.Thread, metaclass=ServerVerifier):
                             send_message(sock, answer)
                     elif request.get(ACTION) == PUBLIC_KEY:
                         if key == sock:
-                            self.server_db.set_key(request[USER][ACCOUNT_NAME],request[KEY])
+                            self.server_db.set_key(
+                                request[USER][ACCOUNT_NAME], request[KEY])
                         answer = {
                             RESPONSE: 203,
                             ALLERT: 'Ключ добавлен'
@@ -240,7 +249,8 @@ class Server(threading.Thread, metaclass=ServerVerifier):
                         send_message(sock, answer)
 
             except Exception as E:
-                LOG.debug(f'Клиент{sock.fileno()} {sock.getpeername()} отключился')
+                LOG.debug(
+                    f'Клиент{sock.fileno()} {sock.getpeername()} отключился')
                 print(E)
                 sock.close
                 all_clients.remove(sock)
@@ -249,9 +259,11 @@ class Server(threading.Thread, metaclass=ServerVerifier):
 
     def reload_active_users(self, window, history_window):
         if self.reload:
-            window.active_users_table.setModel(window.get_active_users_model(self.server_db))
+            window.active_users_table.setModel(
+                window.get_active_users_model(self.server_db))
             window.active_users_table.resizeColumnsToContents()
-            history_window.users_history_table.setModel(history_window.get_users_history_model(self.server_db))
+            history_window.users_history_table.setModel(
+                history_window.get_users_history_model(self.server_db))
             history_window.users_history_table.resizeColumnsToContents()
             print('Данные обновлены')
             self.reload = False
@@ -265,10 +277,12 @@ class Server(threading.Thread, metaclass=ServerVerifier):
         login = self.reg_window.loginEdit.text()
         passwrd = self.reg_window.passEdit.text()
         if " " in login:
-            self.reg_window.messageLabel.setText('В логине не должно быть пробелов')
+            self.reg_window.messageLabel.setText(
+                'В логине не должно быть пробелов')
             return
         if len(passwrd) < 8:
-            self.reg_window.messageLabel.setText('Пароль должен быть не менее 8 символов')
+            self.reg_window.messageLabel.setText(
+                'Пароль должен быть не менее 8 символов')
             return
 
         passwrd = cripto_pass(passwrd)
@@ -277,7 +291,8 @@ class Server(threading.Thread, metaclass=ServerVerifier):
             self.reg_window.loginEdit.clear()
             self.reg_window.passEdit.clear()
         else:
-            self.reg_window.messageLabel.setText(f'{login} уже зарегистрирован на сервере')
+            self.reg_window.messageLabel.setText(
+                f'{login} уже зарегистрирован на сервере')
 
     def run(self):
         serv_socket = socket(AF_INET, SOCK_STREAM)
@@ -301,8 +316,9 @@ class Server(threading.Thread, metaclass=ServerVerifier):
                 read = []
                 write = []
                 try:
-                    read, write, error = select.select(self.clients, self.clients, [], wait)
-                except:
+                    read, write, error = select.select(
+                        self.clients, self.clients, [], wait)
+                except BaseException:
                     pass
 
                 responses = self.read_requests(read, self.clients)
@@ -315,16 +331,21 @@ def main():
     server.start()
     # app = QtWidgets.QApplication(sys.argv)
     window = MyWindow()
-    window.active_users_table.setModel(window.get_active_users_model(server.server_db))
+    window.active_users_table.setModel(
+        window.get_active_users_model(
+            server.server_db))
     window.active_users_table.resizeColumnsToContents()
     window.show()
 
     history_window = UserHistory()
     window.users_history.triggered.connect(history_window.show)
-    history_window.users_history_table.setModel(history_window.get_users_history_model(server.server_db))
+    history_window.users_history_table.setModel(
+        history_window.get_users_history_model(server.server_db))
     history_window.users_history_table.resizeColumnsToContents()
 
-    window.reload.triggered.connect(lambda: server.reload_active_users(window, history_window))
+    window.reload.triggered.connect(
+        lambda: server.reload_active_users(
+            window, history_window))
 
     setting_window = ServerSettings()
     window.server_settings.triggered.connect(setting_window.show)
@@ -334,7 +355,9 @@ def main():
     server.reg_window.addButton.clicked.connect(server.add_new_user)
 
     timer = PyQt5.QtCore.QTimer()
-    timer.timeout.connect(lambda: server.reload_active_users(window, history_window))
+    timer.timeout.connect(
+        lambda: server.reload_active_users(
+            window, history_window))
     timer.start(1000)
 
     sys.exit(server.app.exec_())
