@@ -1,3 +1,4 @@
+""" Gui для серверной части мессенджера"""
 import configparser
 import pathlib
 import sys

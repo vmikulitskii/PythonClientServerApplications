@@ -1,3 +1,5 @@
+""" Gui для клиентской части мессенджера"""
+
 import datetime
 import sys
 
@@ -15,6 +17,7 @@ from common.variables import RECEIVED, SENT
 
 
 class MyWindow(QMainWindow, Ui_MainWindow):
+    ''' Основное окно клиентской части приложения'''
     contact_selected = pyqtSignal(QtWidgets.QListWidgetItem)
 
     def view_contacts(self):
@@ -123,15 +126,16 @@ class LoginPass(QDialog, Ui_loginPasswrdDialog):
 
 
 def main():
+
     client_db = ClientStorage('User-1')
     # client_db.add_contact('User-1')
     app = QtWidgets.QApplication(sys.argv)
     window = MyWindow(client_db)
-    window.make_connection(window.listContacts)
+    # window.make_connection(window.listContacts)
     window.show()
-    # window.load_last_history('User-8')
-    am = ArrivedMessage('Vasia')
-    am.show()
+    # # window.load_last_history('User-8')
+    # # am = ArrivedMessage('Vasia')
+    # # am.show()
 
     window.view_contacts()
 

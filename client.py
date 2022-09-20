@@ -1,3 +1,4 @@
+""" Модуль клиента мессенджера"""
 import datetime
 import hashlib
 import hmac
@@ -27,6 +28,7 @@ LOG = logging.getLogger('client')
 
 
 class Client(QObject):
+    """ Основной класс клиентской части приложения"""
     port = CorrectPort()
     message_arrived = pyqtSignal(str)
 
@@ -397,6 +399,10 @@ class Client(QObject):
         self.app.exec_()
 
     def send_public_key(self):
+        """
+        Функция отправки публичного ключа на сервер.
+        :return:
+        """
         msg = {
             ACTION: PUBLIC_KEY,
             TIME: datetime.datetime.now().timestamp(),
@@ -414,6 +420,11 @@ class Client(QObject):
 
     @login_required
     def start(self):
+        """
+        Запуск основного окна программы, происходит только если
+        пользователь авторизовался на сервере.
+        :return:
+        """
         try:
             print('start')
 
@@ -445,6 +456,10 @@ class Client(QObject):
 
 
 def generate_key():
+    """
+    Генерация ключей для сквозного шифрования
+    :return:
+    """
     key = RSA.generate(2048)
     private_key = key.export_key()
     public_key = key.publickey().export_key()
@@ -453,6 +468,8 @@ def generate_key():
 
 
 def main():
+    ''' Создает обьект клиента, запускает функцию авторизации. Проверяет сгенерированы ли ключи
+    если нет то генерирует, отправляет публичный ключ на сервер'''
     client = Client()
     client.login()
     keys = client.client_db.get_keys()

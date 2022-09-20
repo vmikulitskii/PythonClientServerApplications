@@ -20,7 +20,7 @@ from common.utils import cripto_pass, get_message, send_message
 from common.variables import *
 from common.variables import ADD_CONTACT, DEL_CONTACT, GET_CONTACTS
 from descriptors import CorrectPort
-from metaclasses import  ServerVerifier
+from metaclasses import ServerVerifier
 from server_gui import MyWindow, Registration, ServerSettings, UserHistory
 from server_storage import ServerStorage
 
@@ -31,6 +31,8 @@ class Server(threading.Thread, metaclass=ServerVerifier):
     port = CorrectPort()
 
     def __init__(self):
+        """ При запуске необходимо указать порт при помощи ключа -p и адрес (-a)
+        Иначе настройки будут взяты из конфигурационного файла по умолчанию."""
         self.app = QtWidgets.QApplication(sys.argv)
         threading.Thread.__init__(self)
         self.daemon = True
@@ -258,6 +260,13 @@ class Server(threading.Thread, metaclass=ServerVerifier):
                 self.reload = True
 
     def reload_active_users(self, window, history_window):
+        """
+        Проверяет изменился ли список активных пользователей, и если да
+        то делает запрос к базе и загружает их.
+        :param window:
+        :param history_window:
+        :return:
+        """
         if self.reload:
             window.active_users_table.setModel(
                 window.get_active_users_model(self.server_db))
@@ -295,6 +304,10 @@ class Server(threading.Thread, metaclass=ServerVerifier):
                 f'{login} уже зарегистрирован на сервере')
 
     def run(self):
+        """
+        Запуск сервера
+        :return:
+        """
         serv_socket = socket(AF_INET, SOCK_STREAM)
         serv_socket.bind((self.addr, self.port))
         serv_socket.settimeout(0.5)
